@@ -2,8 +2,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
+import seaborn as sns  # se usa en los motores (figuras); aquí puede quedarse
+import numpy as np     # idem
 import io
 from contextlib import redirect_stdout
 
@@ -196,7 +196,6 @@ filter: none;
 opacity: 1;
 transform: none;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -223,8 +222,7 @@ def init_wizard_state():
 
 def set_engine_from_selected_model():
     """
-    Inicializa el motor elegido por el wizard.
-    (El motor real se conectará en adapter/engine_router.py)
+    Inicializa el estado de ejecución del motor elegido por el wizard.
     """
     st.session_state.outputs = None
     st.session_state.datos_procesados = False
@@ -338,7 +336,7 @@ def render_wizard():
                     “¿cuál es la probabilidad de que la variante B sea mejor que la A?”
                     <ul>
                         <li>No necesitas un tamaño de muestra fijo.</li>
-                        <li>Análisis de resultados vasado en probabilidad.</li>
+                        <li>Análisis de resultados basado en probabilidad.</li>
                         <li>Decisión más rápida: puedes parar cuando desees.</li>
                     </ul>
                 </div>
@@ -406,7 +404,7 @@ def render_wizard():
             <div class="choice-title">¿Puedes analizar tu test A/B con “Session ID” de cada sesión que ha formado parte del experimento?</div>
             <div class="choice-text">
                 Para analizar correctamente un experimento A/B es necesario definir la unidad de análisis.
-                En entornos web, el uso del “Session ID” de GA4 permite identificar exposiciones y conversiones a nivel de sesión, evitando duplicidades y sesgos en el cáculo de resultados.
+                En entornos web, el uso del “Session ID” de GA4 permite identificar exposiciones y conversiones a nivel de sesión, evitando duplicidades y sesgos en el cálculo de resultados.
                 <br><br>
                 ¿Es posible analizar este experimento utilizando el Session ID de GA4?
             </div>
@@ -465,8 +463,8 @@ def render_wizard():
             <div class="choice-title">¿Los valores de tu test van de 0 a 1 o van desde 0 a infinito?</div>
             <div class="choice-text">
                 <ul>
-                    <li><b>Valores entre 0 y 1</b>: de esta manera se analizará mediante la distribución previa Beta, ideal para conversiones (siendo 0 la no conversión y 1 si el usuario ha convertido en la sesión).</li>
-                    <li><b>Valores de 0 a infinito</b>: con esta opción se analizará mediante la distrubución previa Gamma-Poisson, es adecuada para conteos de métricas.</li>
+                    <li><b>Valores entre 0 y 1</b>: se analizará con prior Beta (ideal para conversiones 0/1).</li>
+                    <li><b>Valores de 0 a infinito</b>: se analizará con prior Gamma (adecuada para conteos por visita).</li>
                 </ul>
             </div>
         </div>
@@ -514,9 +512,9 @@ def render_wizard():
 
         if st.session_state.ruta_ok:
             extra = (
-                "De esta manera, el CSV de tu test A/B deberá contener eventos y sesiones agregados."
+                "El CSV deberá contener datos agregados por día (Conversiones X / Visitas X)."
                 if st.session_state.session_id is False else
-                "De esta manera, el CSV deberá contener una columna con los Session ID."
+                "El CSV deberá contener una columna con Session ID y el formato de datos por sesión."
             )
             st.markdown(f"""
             <div class="result-card">
@@ -565,8 +563,8 @@ def render_calculadora_actual():
     st.markdown('<h2 class="main-header">Calculadora Bayesiana para Tests A/B</h2>', unsafe_allow_html=True)
     st.markdown("""
     <div class="info-box">
-    Esta herramienta te permite analizar los resultados de tus pruebas A/B utilizando estadística bayesiana.
-    Sube un archivo CSV con tus datos o ingresa la información manualmente.
+    Esta herramienta ejecuta los motores bayesianos programados por Pablo y muestra sus resultados de forma visual.
+    Sube un archivo CSV con tus datos.
     </div>
     """, unsafe_allow_html=True)
 
@@ -582,27 +580,34 @@ def render_calculadora_actual():
             reset_wizard()
             st.rerun()
 
-        st.markdown('<p class="sub-header">Configuración</p>', unsafe_allow_html=True)
+        st.markdown('<p class="sub-header">Opciones de ejecución</p>', unsafe_allow_html=True)
 
-        umbral_prob = st.slider(
-            "Umbral de probabilidad para decisión",
-            min_value=0.8,
-            max_value=0.99,
-            value=0.95,
-            step=0.01,
-            format="%.2f",
-            key="umbral_prob"
+        # Estos parámetros SÍ existen en los motores refactorizados
+        num_samples = st.number_input(
+            "Número de muestras (simulación)",
+            min_value=5000,
+            max_value=200000,
+            value=20000,
+            step=5000,
+            help="A más muestras, más estable el resultado (y más lento).",
         )
 
-        umbral_mejora = st.slider(
-            "Umbral de mejora mínima",
-            min_value=0.01,
-            max_value=0.20,
-            value=0.01,
-            step=0.01,
-            format="%.2f",
-            key="umbral_mejora"
+        generate_pdf = st.checkbox(
+            "Generar PDF",
+            value=False,
+            help="Genera un reporte PDF con tablas y gráficos (si el motor lo soporta)."
         )
+
+        include_ai = st.checkbox(
+            "Interpretación IA (OpenAI)",
+            value=False,
+            help="Solo si tienes OPENAI_API_KEY configurada en el entorno."
+        )
+
+        # Guardamos en session_state para usarlos al procesar
+        st.session_state.num_samples = int(num_samples)
+        st.session_state.generate_pdf = bool(generate_pdf)
+        st.session_state.include_ai = bool(include_ai)
 
         if st.button("Reiniciar"):
             st.session_state.outputs = None
@@ -625,7 +630,6 @@ def render_calculadora_actual():
             try:
                 df = pd.read_csv(uploaded_file)
 
-                # TODO: cuando conectemos los motores, validaremos columnas según engine_key
                 st.success("✅ ¡Archivo cargado correctamente!")
                 st.subheader("Vista previa de tus datos:")
                 st.dataframe(df, use_container_width=True)
@@ -636,8 +640,11 @@ def render_calculadora_actual():
                         st.error("No hay motor seleccionado. Vuelve al wizard.")
                     else:
                         config = {
-                            "umbral_prob": st.session_state.get("umbral_prob", 0.95),
-                            "umbral_mejora": st.session_state.get("umbral_mejora", 0.01),
+                            "num_samples": st.session_state.get("num_samples", 20000),
+                            "generate_pdf": st.session_state.get("generate_pdf", False),
+                            "include_ai": st.session_state.get("include_ai", False),
+                            # expected_priors se mantiene como default en los motores.
+                            # Cuando quieras, añadimos UI para introducir priors sin tocar lógica.
                         }
                         try:
                             with st.spinner("Ejecutando motor..."):
@@ -681,9 +688,9 @@ def render_calculadora_actual():
             st.subheader("Resumen")
             st.dataframe(out.summary, use_container_width=True)
 
-        # Logs
+        # Logs (IA)
         if getattr(out, "log_text", None):
-            st.subheader("Log")
+            st.subheader("Interpretación / Log")
             st.code(out.log_text)
 
         # Figures
@@ -710,7 +717,13 @@ def render_calculadora_actual():
     st.markdown("---")
     st.markdown("""
     <div style="text-align: center; background-color: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 20px;">
-    <p style="margin: 0; color: #555;">Idea y concepto: <strong>Claudia de la Cruz</strong> &nbsp;|&nbsp; Desarrollo: <strong>Pablo González</strong> &nbsp;|&nbsp; Desarrollo visual: <strong>Eduardo Hernández</strong></p>
+      <p style="margin: 0; color: #555;">
+        <strong>Idea y concepto:</strong> Claudia de la Cruz, Alex García
+        &nbsp;|&nbsp;
+        <strong>Desarrollo estadístico:</strong> Pablo González
+        &nbsp;|&nbsp;
+        <strong>Arquitectura de aplicación y UX:</strong> Eduardo Hernández
+      </p>
     </div>
     """, unsafe_allow_html=True)
 

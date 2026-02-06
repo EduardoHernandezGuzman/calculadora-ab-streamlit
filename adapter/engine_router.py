@@ -33,6 +33,7 @@ def get_engine_label(engine_key: Optional[str]) -> str:
 
 
 def run_engine(engine_key: str, df: pd.DataFrame, config: Dict[str, Any]) -> EngineOutput:
+    # ✅ Bayesiano [0,1] SIN Session ID
     if engine_key == ENGINE_0_1_NO_SID:
         from pablo_code import varios_disenos_0_1 as mod
         out = mod.run(df=df, config=config)
@@ -43,4 +44,16 @@ def run_engine(engine_key: str, df: pd.DataFrame, config: Dict[str, Any]) -> Eng
             log_text=out.get("log_text"),
         )
 
+    # ✅ Bayesiano [0,∞] SIN Session ID
+    if engine_key == ENGINE_0_INF_NO_SID:
+        from pablo_code import varios_disenos_0_inf as mod
+        out = mod.run(df=df, config=config)
+        return EngineOutput(
+            summary=out.get("summary"),
+            figures=out.get("figures"),
+            pdf_bytes=out.get("pdf_bytes"),
+            log_text=out.get("log_text"),
+        )
+
+    # ⏳ Pendientes (a conectar): con Session ID
     raise NotImplementedError("Ese motor todavía no está conectado.")
