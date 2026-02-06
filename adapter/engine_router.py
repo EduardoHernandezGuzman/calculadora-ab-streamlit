@@ -33,10 +33,14 @@ def get_engine_label(engine_key: Optional[str]) -> str:
 
 
 def run_engine(engine_key: str, df: pd.DataFrame, config: Dict[str, Any]) -> EngineOutput:
-    """
-    Stub: aquí conectaremos los 4 scripts de Pablo SIN modificar su lógica.
-    Cuando los tengamos en /pablo_code, este método llamará al script correcto.
-    """
-    raise NotImplementedError(
-        "Motor no conectado aún. Sube los 4 scripts de Pablo a /pablo_code y conectamos run_engine()."
-    )
+    if engine_key == ENGINE_0_1_NO_SID:
+        from pablo_code import varios_disenos_0_1 as mod
+        out = mod.run(df=df, config=config)
+        return EngineOutput(
+            summary=out.get("summary"),
+            figures=out.get("figures"),
+            pdf_bytes=out.get("pdf_bytes"),
+            log_text=out.get("log_text"),
+        )
+
+    raise NotImplementedError("Ese motor todavía no está conectado.")
