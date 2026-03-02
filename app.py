@@ -2,37 +2,29 @@ import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns  # se usa en los motores (figuras); aquí puede quedarse
-import numpy as np     # idem
+import seaborn as sns
+import numpy as np
 import io
 from contextlib import redirect_stdout
 
 from adapter.engine_router import (
-    run_engine,
-    get_engine_label,
-    # Bayes
-    ENGINE_0_1_NO_SID,
-    ENGINE_0_1_SID,
-    ENGINE_0_INF_NO_SID,
-    ENGINE_0_INF_SID,
-    # Frecuentista
-    ENGINE_FREQ_NO_SID,
-    ENGINE_FREQ_SID,
+  run_engine,
+  get_engine_label,
+  ENGINE_0_1_NO_SID,
+  ENGINE_0_1_SID,
+  ENGINE_0_INF_NO_SID,
+  ENGINE_0_INF_SID,
+  ENGINE_FREQ_NO_SID,
+  ENGINE_FREQ_SID,
 )
 
-# =========================
-# Configuración de la página
-# =========================
 st.set_page_config(
-    page_title="Calculadora A/B",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
+  page_title="Calculadora A/B",
+  page_icon="📊",
+  layout="wide",
+  initial_sidebar_state="expanded"
 )
 
-# =========================
-# CSS (manteniendo tu estilo + blur steps)
-# =========================
 st.markdown("""
 <style>
 :root {
@@ -180,7 +172,6 @@ max-width: 1050px;
 margin: 0 auto;
 }
 
-/* ---- Wizard blur sections ---- */
 .step-block {
 margin: 0 0 2rem 0;
 }
@@ -203,622 +194,589 @@ transform: none;
 </style>
 """, unsafe_allow_html=True)
 
-# =========================
-# Helpers de estado
-# =========================
 def reset_wizard():
-    st.session_state.wizard_step = 1
-    st.session_state.enfoque = None           # "bayesiano" | "frecuentista"
-    st.session_state.session_id = None        # True | False
-    st.session_state.tipo_valores = None      # "0_1" | "0_inf" (solo bayesiano)
-    st.session_state.ruta_ok = False
-    st.session_state.selected_engine_key = None
-    st.session_state.show_app = False
-    st.session_state.pending_scroll_to = None
-    st.session_state.outputs = None
-    st.session_state.datos_procesados = False
+  st.session_state.wizard_step = 1
+  st.session_state.enfoque = None
+  st.session_state.session_id = None
+  st.session_state.tipo_valores = None
+  st.session_state.ruta_ok = False
+  st.session_state.selected_engine_key = None
+  st.session_state.show_app = False
+  st.session_state.pending_scroll_to = None
+  st.session_state.outputs = None
+  st.session_state.datos_procesados = False
 
 def init_wizard_state():
-    if "wizard_step" not in st.session_state:
-        reset_wizard()
+  if "wizard_step" not in st.session_state:
+      reset_wizard()
 
 def set_engine_from_selected_model():
-    st.session_state.outputs = None
-    st.session_state.datos_procesados = False
+  st.session_state.outputs = None
+  st.session_state.datos_procesados = False
 
 def is_bayes_engine(engine_key: str | None) -> bool:
-    if not engine_key:
-        return False
-    return engine_key in {
-        ENGINE_0_1_NO_SID, ENGINE_0_1_SID, ENGINE_0_INF_NO_SID, ENGINE_0_INF_SID
-    }
+  if not engine_key:
+      return False
+  return engine_key in {
+      ENGINE_0_1_NO_SID, ENGINE_0_1_SID, ENGINE_0_INF_NO_SID, ENGINE_0_INF_SID
+  }
 
 def is_freq_engine(engine_key: str | None) -> bool:
-    if not engine_key:
-        return False
-    return engine_key in {ENGINE_FREQ_NO_SID, ENGINE_FREQ_SID}
+  if not engine_key:
+      return False
+  return engine_key in {ENGINE_FREQ_NO_SID, ENGINE_FREQ_SID}
 
 def check_route_and_set_model():
-    enfoque = st.session_state.get("enfoque")
-    session_id = st.session_state.get("session_id")
-    tipo_valores = st.session_state.get("tipo_valores")
+  enfoque = st.session_state.get("enfoque")
+  session_id = st.session_state.get("session_id")
+  tipo_valores = st.session_state.get("tipo_valores")
 
-    # 1) Frecuentista: solo depende de Session ID (según scripts de Pablo)
-    if enfoque == "frecuentista":
-        if session_id not in (True, False):
-            st.session_state.ruta_ok = False
-            st.session_state.selected_engine_key = None
-            return
+  if enfoque == "frecuentista":
+      if session_id not in (True, False):
+          st.session_state.ruta_ok = False
+          st.session_state.selected_engine_key = None
+          return
 
-        st.session_state.ruta_ok = True
-        st.session_state.selected_engine_key = ENGINE_FREQ_SID if session_id else ENGINE_FREQ_NO_SID
-        return
+      st.session_state.ruta_ok = True
+      st.session_state.selected_engine_key = ENGINE_FREQ_SID if session_id else ENGINE_FREQ_NO_SID
+      return
 
-    # 2) Bayesiano: depende de Session ID y del tipo de valores
-    if enfoque == "bayesiano":
-        if tipo_valores not in ("0_1", "0_inf") or session_id not in (True, False):
-            st.session_state.ruta_ok = False
-            st.session_state.selected_engine_key = None
-            return
+  if enfoque == "bayesiano":
+      if tipo_valores not in ("0_1", "0_inf") or session_id not in (True, False):
+          st.session_state.ruta_ok = False
+          st.session_state.selected_engine_key = None
+          return
 
-        st.session_state.ruta_ok = True
+      st.session_state.ruta_ok = True
 
-        if tipo_valores == "0_1" and session_id is False:
-            st.session_state.selected_engine_key = ENGINE_0_1_NO_SID
-        elif tipo_valores == "0_1" and session_id is True:
-            st.session_state.selected_engine_key = ENGINE_0_1_SID
-        elif tipo_valores == "0_inf" and session_id is False:
-            st.session_state.selected_engine_key = ENGINE_0_INF_NO_SID
-        else:
-            st.session_state.selected_engine_key = ENGINE_0_INF_SID
-        return
+      if tipo_valores == "0_1" and session_id is False:
+          st.session_state.selected_engine_key = ENGINE_0_1_NO_SID
+      elif tipo_valores == "0_1" and session_id is True:
+          st.session_state.selected_engine_key = ENGINE_0_1_SID
+      elif tipo_valores == "0_inf" and session_id is False:
+          st.session_state.selected_engine_key = ENGINE_0_INF_NO_SID
+      else:
+          st.session_state.selected_engine_key = ENGINE_0_INF_SID
+      return
 
-    # si no hay enfoque
-    st.session_state.ruta_ok = False
-    st.session_state.selected_engine_key = None
+  st.session_state.ruta_ok = False
+  st.session_state.selected_engine_key = None
 
 def scroll_to_anchor(anchor_id: str):
-    components.html(
-        f"""
-        <script>
-          const el = window.parent.document.getElementById("{anchor_id}");
-          if (el) {{
-            el.scrollIntoView({{ behavior: "smooth", block: "center" }});
-          }}
-        </script>
-        """,
-        height=0,
-    )
+  components.html(
+      f"""
+      <script>
+        const el = window.parent.document.getElementById("{anchor_id}");
+        if (el) {{
+          el.scrollIntoView({{ behavior: "smooth", block: "center" }});
+        }}
+      </script>
+      """,
+      height=0,
+  )
 
 def go_to_step(step: int):
-    st.session_state.wizard_step = step
-    st.session_state.pending_scroll_to = f"step-{step}"
-    st.rerun()
+  st.session_state.wizard_step = step
+  st.session_state.pending_scroll_to = f"step-{step}"
+  st.rerun()
 
 def step_open(step_num: int):
-    current = st.session_state.wizard_step
-    cls = "step-active" if current == step_num else "step-done"
-    st.markdown(
-        f'<div id="step-{step_num}" class="step-block {cls}"><div class="step-content">',
-        unsafe_allow_html=True
-    )
+  current = st.session_state.wizard_step
+  cls = "step-active" if current == step_num else "step-done"
+  st.markdown(
+      f'<div id="step-{step_num}" class="step-block {cls}"><div class="step-content">',
+      unsafe_allow_html=True
+  )
 
 def step_close():
-    st.markdown("</div></div>", unsafe_allow_html=True)
+  st.markdown("</div></div>", unsafe_allow_html=True)
 
-# =========================
-# Wizard UI (ACUMULATIVO + BLUR + AUTO-SCROLL)
-# =========================
 def render_wizard():
-    st.markdown('<div class="center-wrap">', unsafe_allow_html=True)
-    st.markdown('<h2 class="main-header">VML THE COCKTAIL</h2>', unsafe_allow_html=True)
+  st.markdown('<div class="center-wrap">', unsafe_allow_html=True)
+  st.markdown('<h2 class="main-header">VML THE COCKTAIL</h2>', unsafe_allow_html=True)
 
-    step = st.session_state.wizard_step
+  step = st.session_state.wizard_step
 
-    pending = st.session_state.get("pending_scroll_to")
-    if pending:
-        scroll_to_anchor(pending)
-        st.session_state.pending_scroll_to = None
+  pending = st.session_state.get("pending_scroll_to")
+  if pending:
+      scroll_to_anchor(pending)
+      st.session_state.pending_scroll_to = None
 
-    # STEP 1
-    step_open(1)
+  step_open(1)
 
-    st.markdown("""
-    <div class="result-card">
-        <div class="choice-title">¡Bienvenido a la calculadora de tests A/B!</div>
-        <div class="choice-text">
-            Esta calculadora te ayudará a tomar decisiones basadas en datos eligiendo entre el enfoque bayesiano o frecuentista.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+  st.markdown("""
+  <div class="result-card">
+      <div class="choice-title">¡Bienvenido a la calculadora de tests A/B!</div>
+      <div class="choice-text">
+          Esta calculadora te ayudará a tomar decisiones basadas en datos eligiendo entre el enfoque bayesiano o frecuentista.
+      </div>
+  </div>
+  """, unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="result-card">
-        <div class="choice-title">Elige el modelo que deseas utilizar para analizar tu test A/B</div>
-        <div class="choice-text">¿No sabes cuál elegir? No te preocupes: te explico cada uno de forma sencilla.</div>
-    </div>
-    """, unsafe_allow_html=True)
+  st.markdown("""
+  <div class="result-card">
+      <div class="choice-title">Elige el modelo que deseas utilizar para analizar tu test A/B</div>
+      <div class="choice-text">¿No sabes cuál elegir? No te preocupes: te explico cada uno de forma sencilla.</div>
+  </div>
+  """, unsafe_allow_html=True)
 
-    if step == 1:
-        col1, col2 = st.columns(2, gap="large")
+  if step == 1:
+      col1, col2 = st.columns(2, gap="large")
 
-        with col1:
-            st.markdown("""
-            <div class="choice-card">
-                <div class="choice-title">Modelo Bayesiano</div>
-                <div class="choice-text">
-                    El enfoque bayesiano interpreta los resultados en términos de probabilidad directa.
-                    <ul>
-                        <li>No necesitas un tamaño de muestra fijo.</li>
-                        <li>Análisis basado en probabilidad.</li>
-                        <li>Decisión más rápida: puedes parar cuando desees.</li>
-                    </ul>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("Elegir modelo Bayesiano", key="btn_bayesiano", type="primary"):
-                st.session_state.enfoque = "bayesiano"
-                st.session_state.session_id = None
-                st.session_state.tipo_valores = None
-                go_to_step(2)
+      with col1:
+          st.markdown("""
+          <div class="choice-card">
+              <div class="choice-title">Modelo Bayesiano</div>
+              <div class="choice-text">
+                  El enfoque bayesiano interpreta los resultados en términos de probabilidad directa.
+                  <ul>
+                      <li>No necesitas un tamaño de muestra fijo.</li>
+                      <li>Análisis basado en probabilidad.</li>
+                      <li>Decisión más rápida: puedes parar cuando desees.</li>
+                  </ul>
+              </div>
+          </div>
+          """, unsafe_allow_html=True)
+          if st.button("Elegir modelo Bayesiano", key="btn_bayesiano", type="primary"):
+              st.session_state.enfoque = "bayesiano"
+              st.session_state.session_id = None
+              st.session_state.tipo_valores = None
+              go_to_step(2)
 
-        with col2:
-            st.markdown("""
-            <div class="choice-card">
-                <div class="choice-title">Modelo Frecuentista</div>
-                <div class="choice-text">
-                    El enfoque frecuentista estima precisión/IC y permite contrastar si B supera a A (bootstrap).
-                    <ul>
-                        <li>Análisis basado en remuestreo (bootstrap).</li>
-                        <li>Salida: precisión + intervalo de confianza.</li>
-                    </ul>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("Elegir modelo Frecuentista", key="btn_frecuentista", type="primary"):
-                st.session_state.enfoque = "frecuentista"
-                st.session_state.session_id = None
-                st.session_state.tipo_valores = None
-                go_to_step(2)
-    else:
-        enfoque_txt = "Bayesiano" if st.session_state.enfoque == "bayesiano" else "Frecuentista"
-        st.markdown(f"""
-        <div class="success-box">
-            ✅ Seleccionado: <b>{enfoque_txt}</b>
-        </div>
-        """, unsafe_allow_html=True)
+      with col2:
+          st.markdown("""
+          <div class="choice-card">
+              <div class="choice-title">Modelo Frecuentista</div>
+              <div class="choice-text">
+                  El enfoque frecuentista estima precisión/IC y permite contrastar si B supera a A (bootstrap).
+                  <ul>
+                      <li>Análisis basado en remuestreo (bootstrap).</li>
+                      <li>Salida: precisión + intervalo de confianza.</li>
+                  </ul>
+              </div>
+          </div>
+          """, unsafe_allow_html=True)
+          if st.button("Elegir modelo Frecuentista", key="btn_frecuentista", type="primary"):
+              st.session_state.enfoque = "frecuentista"
+              st.session_state.session_id = None
+              st.session_state.tipo_valores = None
+              go_to_step(2)
+  else:
+      enfoque_txt = "Bayesiano" if st.session_state.enfoque == "bayesiano" else "Frecuentista"
+      st.markdown(f"""
+      <div class="success-box">
+          ✅ Seleccionado: <b>{enfoque_txt}</b>
+      </div>
+      """, unsafe_allow_html=True)
 
-        if st.button("Editar paso 1", key="edit_step_1"):
-            st.session_state.wizard_step = 1
-            st.session_state.session_id = None
-            st.session_state.tipo_valores = None
-            st.session_state.ruta_ok = False
-            st.session_state.selected_engine_key = None
-            st.session_state.show_app = False
-            st.session_state.pending_scroll_to = "step-1"
-            st.session_state.outputs = None
-            st.session_state.datos_procesados = False
-            st.rerun()
+      if st.button("Editar paso 1", key="edit_step_1"):
+          st.session_state.wizard_step = 1
+          st.session_state.session_id = None
+          st.session_state.tipo_valores = None
+          st.session_state.ruta_ok = False
+          st.session_state.selected_engine_key = None
+          st.session_state.show_app = False
+          st.session_state.pending_scroll_to = "step-1"
+          st.session_state.outputs = None
+          st.session_state.datos_procesados = False
+          st.rerun()
 
-    step_close()
+  step_close()
 
-    # STEP 2 (Session ID)
-    if step >= 2:
-        step_open(2)
+  if step >= 2:
+      step_open(2)
 
-        st.markdown('<div class="subsection-spacer"></div>', unsafe_allow_html=True)
+      st.markdown('<div class="subsection-spacer"></div>', unsafe_allow_html=True)
 
-        enfoque_txt = "Bayesiano" if st.session_state.enfoque == "bayesiano" else "Frecuentista"
-        st.markdown(f"""
-        <div class="result-card">
-            <div class="choice-title">¡Perfecto!</div>
-            <div class="choice-text">Has seleccionado analizar tu test A/B con el modelo <b>{enfoque_txt}</b>.</div>
-        </div>
-        """, unsafe_allow_html=True)
+      enfoque_txt = "Bayesiano" if st.session_state.enfoque == "bayesiano" else "Frecuentista"
+      st.markdown(f"""
+      <div class="result-card">
+          <div class="choice-title">¡Perfecto!</div>
+          <div class="choice-text">Has seleccionado analizar tu test A/B con el modelo <b>{enfoque_txt}</b>.</div>
+      </div>
+      """, unsafe_allow_html=True)
 
-        st.markdown("""
-        <div class="result-card">
-            <div class="choice-title">¿Puedes analizar tu test A/B con “Session ID”?</div>
-            <div class="choice-text">
-                En entornos web, el uso del “Session ID” de GA4 permite identificar exposiciones y conversiones a nivel de sesión.
-                <br><br>
-                ¿Es posible analizar este experimento utilizando Session ID?
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+      st.markdown("""
+      <div class="result-card">
+          <div class="choice-title">¿Puedes analizar tu test A/B con "Session ID"?</div>
+          <div class="choice-text">
+              En entornos web, el uso del "Session ID" de GA4 permite identificar exposiciones y conversiones a nivel de sesión.
+              <br><br>
+              ¿Es posible analizar este experimento utilizando Session ID?
+          </div>
+      </div>
+      """, unsafe_allow_html=True)
 
-        if step == 2:
-            c1, c2 = st.columns(2, gap="large")
-            with c1:
-                if st.button("Tengo Session ID", key="btn_sid_yes", type="primary"):
-                    st.session_state.session_id = True
-                    # Si es frecuentista, podemos saltar el paso 3
-                    if st.session_state.enfoque == "frecuentista":
-                        go_to_step(4)
-                    else:
-                        go_to_step(3)
-            with c2:
-                if st.button("No tengo Session ID", key="btn_sid_no", type="primary"):
-                    st.session_state.session_id = False
-                    if st.session_state.enfoque == "frecuentista":
-                        go_to_step(4)
-                    else:
-                        go_to_step(3)
+      if step == 2:
+          c1, c2 = st.columns(2, gap="large")
+          with c1:
+              if st.button("Tengo Session ID", key="btn_sid_yes", type="primary"):
+                  st.session_state.session_id = True
+                  if st.session_state.enfoque == "frecuentista":
+                      go_to_step(4)
+                  else:
+                      go_to_step(3)
+          with c2:
+              if st.button("No tengo Session ID", key="btn_sid_no", type="primary"):
+                  st.session_state.session_id = False
+                  if st.session_state.enfoque == "frecuentista":
+                      go_to_step(4)
+                  else:
+                      go_to_step(3)
 
-            if st.button("⬅️ Volver", key="back_2"):
-                go_to_step(1)
-        else:
-            sid_txt = "con Session ID" if st.session_state.session_id else "sin Session ID"
-            st.markdown(f"""
-            <div class="success-box">
-                ✅ Seleccionado: <b>{sid_txt}</b>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("Editar paso 2", key="edit_step_2"):
-                st.session_state.wizard_step = 2
-                st.session_state.tipo_valores = None
-                st.session_state.ruta_ok = False
-                st.session_state.selected_engine_key = None
-                st.session_state.show_app = False
-                st.session_state.pending_scroll_to = "step-2"
-                st.session_state.outputs = None
-                st.session_state.datos_procesados = False
-                st.rerun()
+          if st.button("⬅️ Volver", key="back_2"):
+              go_to_step(1)
+      else:
+          sid_txt = "con Session ID" if st.session_state.session_id else "sin Session ID"
+          st.markdown(f"""
+          <div class="success-box">
+              ✅ Seleccionado: <b>{sid_txt}</b>
+          </div>
+          """, unsafe_allow_html=True)
+          if st.button("Editar paso 2", key="edit_step_2"):
+              st.session_state.wizard_step = 2
+              st.session_state.tipo_valores = None
+              st.session_state.ruta_ok = False
+              st.session_state.selected_engine_key = None
+              st.session_state.show_app = False
+              st.session_state.pending_scroll_to = "step-2"
+              st.session_state.outputs = None
+              st.session_state.datos_procesados = False
+              st.rerun()
 
-        step_close()
+      step_close()
 
-    # STEP 3 (solo Bayesiano: tipo valores)
-    if step >= 3 and st.session_state.get("enfoque") == "bayesiano":
-        step_open(3)
+  if step >= 3 and st.session_state.get("enfoque") == "bayesiano":
+      step_open(3)
 
-        st.markdown('<div class="subsection-spacer"></div>', unsafe_allow_html=True)
+      st.markdown('<div class="subsection-spacer"></div>', unsafe_allow_html=True)
 
-        sid_txt = "con Session ID" if st.session_state.session_id else "sin Session ID"
-        st.markdown(f"""
-        <div class="result-card">
-            <div class="choice-title">Tipo de métrica</div>
-            <div class="choice-text">Analizarás tu test A/B {sid_txt}. Ahora elige el tipo de valores.</div>
-        </div>
-        """, unsafe_allow_html=True)
+      sid_txt = "con Session ID" if st.session_state.session_id else "sin Session ID"
+      st.markdown(f"""
+      <div class="result-card">
+          <div class="choice-title">Tipo de métrica</div>
+          <div class="choice-text">Analizarás tu test A/B {sid_txt}. Ahora elige el tipo de valores.</div>
+      </div>
+      """, unsafe_allow_html=True)
 
-        st.markdown("""
-        <div class="result-card">
-            <div class="choice-title">¿Los valores van de 0 a 1 o van de 0 a infinito?</div>
-            <div class="choice-text">
-                <ul>
-                    <li><b>0 a 1</b>: prior Beta (conversiones 0/1).</li>
-                    <li><b>0 a ∞</b>: prior Gamma (conteos por visita/sesión).</li>
-                </ul>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+      st.markdown("""
+      <div class="result-card">
+          <div class="choice-title">¿Los valores van de 0 a 1 o van de 0 a infinito?</div>
+          <div class="choice-text">
+              <ul>
+                  <li><b>0 a 1</b>: prior Beta (conversiones 0/1).</li>
+                  <li><b>0 a ∞</b>: prior Gamma (conteos por visita/sesión).</li>
+              </ul>
+          </div>
+      </div>
+      """, unsafe_allow_html=True)
 
-        if step == 3:
-            c1, c2 = st.columns(2, gap="large")
-            with c1:
-                if st.button("Valores entre 0 y 1", key="btn_01", type="primary"):
-                    st.session_state.tipo_valores = "0_1"
-                    go_to_step(4)
-            with c2:
-                if st.button("Valores de 0 a infinito", key="btn_0inf", type="primary"):
-                    st.session_state.tipo_valores = "0_inf"
-                    go_to_step(4)
+      if step == 3:
+          c1, c2 = st.columns(2, gap="large")
+          with c1:
+              if st.button("Valores entre 0 y 1", key="btn_01", type="primary"):
+                  st.session_state.tipo_valores = "0_1"
+                  go_to_step(4)
+          with c2:
+              if st.button("Valores de 0 a infinito", key="btn_0inf", type="primary"):
+                  st.session_state.tipo_valores = "0_inf"
+                  go_to_step(4)
 
-            if st.button("⬅️ Volver", key="back_3"):
-                go_to_step(2)
-        else:
-            tipo_txt = "Valores entre 0 y 1" if st.session_state.tipo_valores == "0_1" else "Valores de 0 a infinito"
-            st.markdown(f"""
-            <div class="success-box">
-                ✅ Seleccionado: <b>{tipo_txt}</b>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("Editar paso 3", key="edit_step_3"):
-                st.session_state.wizard_step = 3
-                st.session_state.ruta_ok = False
-                st.session_state.selected_engine_key = None
-                st.session_state.show_app = False
-                st.session_state.pending_scroll_to = "step-3"
-                st.session_state.outputs = None
-                st.session_state.datos_procesados = False
-                st.rerun()
+          if st.button("⬅️ Volver", key="back_3"):
+              go_to_step(2)
+      else:
+          tipo_txt = "Valores entre 0 y 1" if st.session_state.tipo_valores == "0_1" else "Valores de 0 a infinito"
+          st.markdown(f"""
+          <div class="success-box">
+              ✅ Seleccionado: <b>{tipo_txt}</b>
+          </div>
+          """, unsafe_allow_html=True)
+          if st.button("Editar paso 3", key="edit_step_3"):
+              st.session_state.wizard_step = 3
+              st.session_state.ruta_ok = False
+              st.session_state.selected_engine_key = None
+              st.session_state.show_app = False
+              st.session_state.pending_scroll_to = "step-3"
+              st.session_state.outputs = None
+              st.session_state.datos_procesados = False
+              st.rerun()
 
-        step_close()
+      step_close()
 
-    # STEP 4 (selección final)
-    if step >= 4:
-        step_open(4)
-        st.markdown('<div class="subsection-spacer"></div>', unsafe_allow_html=True)
+  if step >= 4:
+      step_open(4)
+      st.markdown('<div class="subsection-spacer"></div>', unsafe_allow_html=True)
 
-        check_route_and_set_model()
+      check_route_and_set_model()
 
-        if st.session_state.ruta_ok:
-            engine_key = st.session_state.selected_engine_key
+      if st.session_state.ruta_ok:
+          engine_key = st.session_state.selected_engine_key
 
-            if is_bayes_engine(engine_key):
-                extra = (
-                    "El CSV deberá contener datos agregados por día (Conversiones X / Visitas X)."
-                    if st.session_state.session_id is False else
-                    "El CSV deberá contener SessionID y conversiones por sesión (según el motor de Pablo)."
-                )
-            else:
-                # frecuentista
-                extra = (
-                    "Frecuentista sin Session ID: CSV agregado con Visitas/Conversiones A y B."
-                    if st.session_state.session_id is False else
-                    "Frecuentista con Session ID: CSV con columnas A y B (valores por sesión), NaN cuando no aplica."
-                )
+          if is_bayes_engine(engine_key):
+              extra = (
+                  "El CSV deberá contener datos agregados por día (Conversiones X / Visitas X)."
+                  if st.session_state.session_id is False else
+                  "El CSV deberá contener SessionID y conversiones por sesión (según el motor de Pablo)."
+              )
+          else:
+              extra = (
+                  "Frecuentista sin Session ID: CSV agregado con Visitas/Conversiones A y B."
+                  if st.session_state.session_id is False else
+                  "Frecuentista con Session ID: CSV con columnas A y B (valores por sesión), NaN cuando no aplica."
+              )
 
-            st.markdown(f"""
-            <div class="result-card">
-                <div class="choice-title">¡Listo!</div>
-                <div class="choice-text">
-                    Ruta disponible ✅<br>
-                    Motor seleccionado: <b>{get_engine_label(engine_key)}</b><br><br>
-                    {extra}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+          st.markdown(f"""
+          <div class="result-card">
+              <div class="choice-title">¡Listo!</div>
+              <div class="choice-text">
+                  Ruta disponible ✅<br>
+                  Motor seleccionado: <b>{get_engine_label(engine_key)}</b><br><br>
+                  {extra}
+              </div>
+          </div>
+          """, unsafe_allow_html=True)
 
-            c1, c2, c3 = st.columns([1, 2, 1])
-            with c2:
-                if st.button("Analizar test A/B", key="btn_go_app", type="primary"):
-                    set_engine_from_selected_model()
-                    st.session_state.show_app = True
-                    st.rerun()
-        else:
-            st.markdown("""
-            <div class="warning-box">
-                <b>Todavía no disponible</b><br><br>
-                Selecciona un enfoque y completa los pasos.
-            </div>
-            """, unsafe_allow_html=True)
+          c1, c2, c3 = st.columns([1, 2, 1])
+          with c2:
+              if st.button("Analizar test A/B", key="btn_go_app", type="primary"):
+                  set_engine_from_selected_model()
+                  st.session_state.show_app = True
+                  st.rerun()
+      else:
+          st.markdown("""
+          <div class="warning-box">
+              <b>Todavía no disponible</b><br><br>
+              Selecciona un enfoque y completa los pasos.
+          </div>
+          """, unsafe_allow_html=True)
 
-            c1, c2, c3 = st.columns([1, 2, 1])
-            with c2:
-                if st.button("Volver al inicio", key="btn_back_home", type="primary"):
-                    reset_wizard()
-                    st.rerun()
+          c1, c2, c3 = st.columns([1, 2, 1])
+          with c2:
+              if st.button("Volver al inicio", key="btn_back_home", type="primary"):
+                  reset_wizard()
+                  st.rerun()
 
-        if st.button("⬅️ Volver al paso anterior", key="back_4"):
-            if st.session_state.get("enfoque") == "bayesiano":
-                go_to_step(3)
-            else:
-                go_to_step(2)
+      if st.button("⬅️ Volver al paso anterior", key="back_4"):
+          if st.session_state.get("enfoque") == "bayesiano":
+              go_to_step(3)
+          else:
+              go_to_step(2)
 
-        step_close()
+      step_close()
 
-    st.markdown('</div>', unsafe_allow_html=True)
+  st.markdown('</div>', unsafe_allow_html=True)
 
-# =========================
-# App actual (capa visual para motor)
-# =========================
 def render_calculadora_actual():
-    st.markdown('<h2 class="main-header">Calculadora para Tests A/B</h2>', unsafe_allow_html=True)
-    st.markdown("""
-    <div class="info-box">
-    Esta herramienta ejecuta los motores (bayesianos y frecuentistas) programados por Pablo y muestra sus resultados de forma visual.
-    Sube un archivo CSV con tus datos.
-    </div>
-    """, unsafe_allow_html=True)
+  st.markdown('<h2 class="main-header">Calculadora para Tests A/B</h2>', unsafe_allow_html=True)
+  st.markdown("""
+  <div class="info-box">
+  Esta herramienta ejecuta los motores (bayesianos y frecuentistas) programados por Pablo y muestra sus resultados de forma visual.
+  Sube un archivo CSV con tus datos.
+  </div>
+  """, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+  st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
 
-    engine_key = st.session_state.get("selected_engine_key")
+  engine_key = st.session_state.get("selected_engine_key")
 
-    # Sidebar
-    with st.sidebar:
-        st.markdown('<p class="sub-header">Motor seleccionado</p>', unsafe_allow_html=True)
-        st.info(f"**{get_engine_label(engine_key)}**")
+  with st.sidebar:
+      st.markdown('<p class="sub-header">Motor seleccionado</p>', unsafe_allow_html=True)
+      st.info(f"**{get_engine_label(engine_key)}**")
 
-        if st.button("⬅️ Volver al inicio (Wizard)"):
-            reset_wizard()
-            st.rerun()
+      if st.button("⬅️ Volver al inicio (Wizard)"):
+          reset_wizard()
+          st.rerun()
 
-        st.markdown('<p class="sub-header">Opciones de ejecución</p>', unsafe_allow_html=True)
+      st.markdown('<p class="sub-header">Opciones de ejecución</p>', unsafe_allow_html=True)
 
-        if is_bayes_engine(engine_key):
-            num_samples = st.number_input(
-                "Número de muestras (simulación)",
-                min_value=5000,
-                max_value=200000,
-                value=20000,
-                step=5000,
-                help="A más muestras, más estable el resultado (y más lento).",
-            )
-            generate_pdf = st.checkbox(
-                "Generar PDF",
-                value=False,
-                help="Genera un reporte PDF con tablas y gráficos (si el motor lo soporta)."
-            )
-            include_ai = st.checkbox(
-                "Interpretación IA (OpenAI)",
-                value=False,
-                help="Solo si tienes OPENAI_API_KEY configurada en el entorno."
-            )
+      if is_bayes_engine(engine_key):
+          num_samples = st.number_input(
+              "Número de muestras (simulación)",
+              min_value=5000,
+              max_value=200000,
+              value=20000,
+              step=5000,
+              help="A más muestras, más estable el resultado (y más lento).",
+          )
+          generate_pdf = st.checkbox(
+              "Generar PDF",
+              value=False,
+              help="Genera un reporte PDF con tablas y gráficos (si el motor lo soporta)."
+          )
+          include_ai = st.checkbox(
+              "Interpretación IA (OpenAI)",
+              value=False,
+              help="Solo si tienes OPENAI_API_KEY configurada en el entorno."
+          )
 
-            st.session_state.num_samples = int(num_samples)
-            st.session_state.generate_pdf = bool(generate_pdf)
-            st.session_state.include_ai = bool(include_ai)
+          st.session_state.num_samples = int(num_samples)
+          st.session_state.generate_pdf = bool(generate_pdf)
+          st.session_state.include_ai = bool(include_ai)
 
-        elif is_freq_engine(engine_key):
-            n_iteraciones = st.number_input(
-                "Iteraciones (bootstrap)",
-                min_value=1000,
-                max_value=200000,
-                value=10000,
-                step=1000,
-                help="A más iteraciones, más estable el resultado (y más lento).",
-            )
-            generate_pdf = st.checkbox(
-                "Generar PDF",
-                value=False,
-                help="Genera un reporte PDF con tablas y gráficos (si el motor lo soporta)."
-            )
-            include_ai = st.checkbox(
-                "Interpretación IA (OpenAI)",
-                value=False,
-                help="Solo si tienes OPENAI_API_KEY configurada en el entorno."
-            )
+      elif is_freq_engine(engine_key):
+          n_iteraciones = st.number_input(
+              "Iteraciones (bootstrap)",
+              min_value=1000,
+              max_value=200000,
+              value=10000,
+              step=1000,
+              help="A más iteraciones, más estable el resultado (y más lento).",
+          )
+          generate_pdf = st.checkbox(
+              "Generar PDF",
+              value=False,
+              help="Genera un reporte PDF con tablas y gráficos (si el motor lo soporta)."
+          )
+          include_ai = st.checkbox(
+              "Interpretación IA (OpenAI)",
+              value=False,
+              help="Solo si tienes OPENAI_API_KEY configurada en el entorno."
+          )
 
-            st.session_state.n_iteraciones = int(n_iteraciones)
-            st.session_state.generate_pdf = bool(generate_pdf)
-            st.session_state.include_ai = bool(include_ai)
+          st.session_state.n_iteraciones = int(n_iteraciones)
+          st.session_state.generate_pdf = bool(generate_pdf)
+          st.session_state.include_ai = bool(include_ai)
 
-        else:
-            st.warning("No hay motor seleccionado. Vuelve al wizard.")
+      else:
+          st.warning("No hay motor seleccionado. Vuelve al wizard.")
 
-        if st.button("Reiniciar"):
-            st.session_state.outputs = None
-            st.session_state.datos_procesados = False
-            st.success("Reiniciado correctamente")
-            st.rerun()
+      if st.button("Reiniciar"):
+          st.session_state.outputs = None
+          st.session_state.datos_procesados = False
+          st.success("Reiniciado correctamente")
+          st.rerun()
 
-    # Tabs
-    st.markdown('<div class="subsection-spacer"></div>', unsafe_allow_html=True)
-    tab1, tab2, tab3 = st.tabs(["📊 Cargar CSV", "✏️ Entrada manual", "📋 Formato CSV"])
+  st.markdown('<div class="subsection-spacer"></div>', unsafe_allow_html=True)
+  tab1, tab2, tab3 = st.tabs(["📊 Cargar CSV", "✏️ Entrada manual", "📋 Formato CSV"])
 
-    # TAB 1 CSV
-    with tab1:
-        st.markdown('<p class="sub-header">Cargar datos desde CSV</p>', unsafe_allow_html=True)
-        st.info("💡 Si no sabes cómo preparar tu archivo CSV, revisa la pestaña **'Formato CSV'**.")
+  with tab1:
+      st.markdown('<p class="sub-header">Cargar datos desde CSV</p>', unsafe_allow_html=True)
+      st.info("💡 Si no sabes cómo preparar tu archivo CSV, revisa la pestaña **'Formato CSV'**.")
 
-        uploaded_file = st.file_uploader("Selecciona tu archivo CSV", type=["csv"])
+      uploaded_file = st.file_uploader("Selecciona tu archivo CSV", type=["csv"])
 
-        if uploaded_file is not None:
-            try:
-                df = pd.read_csv(uploaded_file)
+      if uploaded_file is not None:
+          try:
+              df = pd.read_csv(uploaded_file)
 
-                st.success("✅ ¡Archivo cargado correctamente!")
-                st.subheader("Vista previa de tus datos:")
-                st.dataframe(df, use_container_width=True)
+              st.success("✅ ¡Archivo cargado correctamente!")
+              st.subheader("Vista previa de tus datos:")
+              st.dataframe(df, use_container_width=True)
 
-                if st.button("🚀 Procesar datos del CSV", type="primary"):
-                    if not engine_key:
-                        st.error("No hay motor seleccionado. Vuelve al wizard.")
-                    else:
-                        # Config según motor (sin inventar sliders que Pablo no tiene)
-                        if is_bayes_engine(engine_key):
-                            config = {
-                                "num_samples": st.session_state.get("num_samples", 20000),
-                                "generate_pdf": st.session_state.get("generate_pdf", False),
-                                "include_ai": st.session_state.get("include_ai", False),
-                            }
-                        else:
-                            config = {
-                                "n_iteraciones": st.session_state.get("n_iteraciones", 10000),
-                                "generate_pdf": st.session_state.get("generate_pdf", False),
-                                "include_ai": st.session_state.get("include_ai", False),
-                            }
+              if st.button("🚀 Procesar datos del CSV", type="primary"):
+                  if not engine_key:
+                      st.error("No hay motor seleccionado. Vuelve al wizard.")
+                  else:
+                      if is_bayes_engine(engine_key):
+                          config = {
+                              "num_samples": st.session_state.get("num_samples", 20000),
+                              "generate_pdf": st.session_state.get("generate_pdf", False),
+                              "include_ai": st.session_state.get("include_ai", False),
+                          }
+                      else:
+                          config = {
+                              "n_iteraciones": st.session_state.get("n_iteraciones", 10000),
+                              "generate_pdf": st.session_state.get("generate_pdf", False),
+                              "include_ai": st.session_state.get("include_ai", False),
+                          }
 
-                        try:
-                            with st.spinner("Ejecutando motor..."):
-                                out = run_engine(engine_key, df, config)
-                            st.session_state.outputs = out
-                            st.session_state.datos_procesados = True
-                            st.success("Motor ejecutado.")
-                        except NotImplementedError as e:
-                            st.warning(str(e))
-                        except Exception as e:
-                            st.error(f"❌ Error ejecutando el motor: {e}")
+                      try:
+                          with st.spinner("Ejecutando motor..."):
+                              out = run_engine(engine_key, df, config)
+                          st.session_state.outputs = out
+                          st.session_state.datos_procesados = True
+                          st.success("Motor ejecutado.")
+                      except NotImplementedError as e:
+                          st.warning(str(e))
+                      except Exception as e:
+                          st.error(f"❌ Error ejecutando el motor: {e}")
 
-            except Exception as e:
-                st.error(f"❌ Error al procesar el archivo: {e}")
+          except Exception as e:
+              st.error(f"❌ Error al procesar el archivo: {e}")
 
-    # TAB 2 Manual (placeholder)
-    with tab2:
-        st.markdown('<p class="sub-header">Entrada manual de datos</p>', unsafe_allow_html=True)
-        st.info("Entrada manual: la conectaremos cuando tengamos definidos los inputs exactos para cada motor de Pablo.")
+  with tab2:
+      st.markdown('<p class="sub-header">Entrada manual de datos</p>', unsafe_allow_html=True)
+      st.info("Entrada manual: la conectaremos cuando tengamos definidos los inputs exactos para cada motor de Pablo.")
 
-    # TAB 3 Formato CSV (explicación por motor)
-    with tab3:
-        st.markdown('<p class="sub-header">Cómo preparar tu archivo CSV</p>', unsafe_allow_html=True)
+  with tab3:
+      st.markdown('<p class="sub-header">Cómo preparar tu archivo CSV</p>', unsafe_allow_html=True)
 
-        if is_bayes_engine(engine_key):
-            st.markdown("""
+      if is_bayes_engine(engine_key):
+          st.markdown("""
 - **Bayesiana [0,1] sin Session ID**: columnas `Día`, `Conversiones A`, `Visitas A`, `Conversiones B`, `Visitas B` (y más variantes si aplica).
 - **Bayesiana [0,∞] sin Session ID**: mismo formato agregado, pero interpretado como conteos por visita.
 - **Bayesiana con Session ID**: columnas `Día`, `SessionID`, y columnas de conversiones por variante (NaN cuando no aplica).
 """)
-        elif is_freq_engine(engine_key):
-            if engine_key == ENGINE_FREQ_NO_SID:
-                st.markdown("""
+      elif is_freq_engine(engine_key):
+          if engine_key == ENGINE_FREQ_NO_SID:
+              st.markdown("""
 - **Frecuentista sin Session ID (agregado)**: columnas:
-  - `Día`, `Visitas A`, `Visitas B`, `Conversiones A`, `Conversiones B`
+- `Día`, `Visitas A`, `Visitas B`, `Conversiones A`, `Conversiones B`
 - El motor suma todo el periodo y calcula precisión + IC por bootstrap.
 """)
-            else:
-                st.markdown("""
+          else:
+              st.markdown("""
 - **Frecuentista con Session ID (por sesión)**:
-  - El motor toma **las 2 primeras columnas** como A y B (según el script).
-  - Cada fila es una sesión/observación.
-  - Usa `NaN` cuando la sesión no pertenece a esa variante.
-  - Los valores pueden ser 0/1 o conteos (según lo que mida Pablo en ese script).
+- El motor toma **las 2 primeras columnas** como A y B (según el script).
+- Cada fila es una sesión/observación.
+- Usa `NaN` cuando la sesión no pertenece a esa variante.
+- Los valores pueden ser 0/1 o conteos (según lo que mida Pablo en ese script).
 """)
-        else:
-            st.info("Selecciona un motor para ver su formato.")
+      else:
+          st.info("Selecciona un motor para ver su formato.")
 
-    # Resultados
-    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+  st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
 
-    if st.session_state.get("datos_procesados", False):
-        st.markdown("---")
-        st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
-        st.markdown('<h2 class="main-header">Resultados</h2>', unsafe_allow_html=True)
+  if st.session_state.get("datos_procesados", False):
+      st.markdown("---")
+      st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+      st.markdown('<h2 class="main-header">Resultados</h2>', unsafe_allow_html=True)
 
-        out = st.session_state.get("outputs")
-        if out is None:
-            st.info("No hay outputs disponibles.")
-            return
+      out = st.session_state.get("outputs")
+      if out is None:
+          st.info("No hay outputs disponibles.")
+          return
 
-        # Summary
-        if getattr(out, "summary", None) is not None:
-            st.subheader("Resumen")
-            st.dataframe(out.summary, use_container_width=True)
+      if getattr(out, "summary", None) is not None:
+          st.subheader("Resumen")
+          st.dataframe(out.summary, use_container_width=True)
 
-        # Logs (IA o logs del motor)
-        if getattr(out, "log_text", None):
-            st.subheader("Interpretación / Log")
-            st.code(out.log_text)
+      if getattr(out, "log_text", None):
+          st.subheader("Interpretación / Log")
+          st.code(out.log_text)
 
-        # Figures
-        if getattr(out, "figures", None):
-            st.subheader("Gráficos")
-            for fig in out.figures:
-                try:
-                    st.pyplot(fig)
-                except Exception:
-                    pass
+      if getattr(out, "figures", None):
+          st.subheader("Gráficos")
+          for fig in out.figures:
+              try:
+                  st.pyplot(fig)
+              except Exception:
+                  pass
 
-        # PDF
-        if getattr(out, "pdf_bytes", None):
-            st.subheader("Reporte")
-            st.download_button(
-                "📄 Descargar PDF",
-                data=out.pdf_bytes,
-                file_name="reporte.pdf",
-                mime="application/pdf",
-            )
+      if getattr(out, "pdf_bytes", None):
+          st.subheader("Reporte")
+          st.download_button(
+              "📄 Descargar PDF",
+              data=out.pdf_bytes,
+              file_name="reporte.pdf",
+              mime="application/pdf",
+          )
 
-    # Footer (créditos)
-    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
-    st.markdown("---")
-    st.markdown("""
-    <div style="text-align: center; background-color: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 20px;">
-      <p style="margin: 0; color: #555;">
-        Idea y concepto: <strong>Claudia de la Cruz</strong>, <strong>Alex García</strong>
-        &nbsp;|&nbsp; Desarrollo estadístico: <strong>Pablo González</strong>
-        &nbsp;|&nbsp; Arquitectura de aplicación y UX: <strong>Eduardo Hernández</strong>
-      </p>
-    </div>
-    """, unsafe_allow_html=True)
+  st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+  st.markdown("---")
+  st.markdown("""
+  <div style="text-align: center; background-color: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 20px;">
+    <p style="margin: 0; color: #555;">
+      Idea y concepto: <strong>Claudia de la Cruz</strong>, <strong>Alex García</strong>
+      &nbsp;|&nbsp; Desarrollo estadístico: <strong>Pablo González</strong>
+      &nbsp;|&nbsp; Arquitectura de aplicación y UX: <strong>Eduardo Hernández</strong>
+    </p>
+  </div>
+  """, unsafe_allow_html=True)
 
-# =========================
-# MAIN
-# =========================
 init_wizard_state()
 
 if st.session_state.get("show_app", False):
-    render_calculadora_actual()
+  render_calculadora_actual()
 else:
-    render_wizard()
+  render_wizard()
