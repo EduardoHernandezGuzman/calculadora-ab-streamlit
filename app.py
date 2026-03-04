@@ -710,7 +710,7 @@ def render_calculadora_actual():
           st.rerun()
 
   st.markdown('<div class="subsection-spacer"></div>', unsafe_allow_html=True)
-  tab1, tab2, tab3 = st.tabs(["📊 Cargar CSV", "✏️ Entrada manual", "📋 Formato CSV"])
+  tab1, tab3 = st.tabs(["📊 Cargar CSV", "📋 Formato CSV"])
 
   with tab1:
       st.markdown('<p class="sub-header">Cargar datos desde CSV</p>', unsafe_allow_html=True)
@@ -756,10 +756,6 @@ def render_calculadora_actual():
 
           except Exception as e:
               st.error(f"❌ Error al procesar el archivo: {e}")
-
-  with tab2:
-      st.markdown('<p class="sub-header">Entrada manual de datos</p>', unsafe_allow_html=True)
-      st.info("Entrada manual: la conectaremos cuando tengamos definidos los inputs exactos para cada motor de Pablo.")
 
   with tab3:
       st.markdown('<p class="sub-header">Cómo preparar tu archivo CSV</p>', unsafe_allow_html=True)
