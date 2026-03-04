@@ -236,7 +236,6 @@ def check_route_and_set_model():
           st.session_state.ruta_ok = False
           st.session_state.selected_engine_key = None
           return
-
       st.session_state.ruta_ok = True
       st.session_state.selected_engine_key = ENGINE_FREQ_SID if session_id else ENGINE_FREQ_NO_SID
       return
@@ -246,9 +245,7 @@ def check_route_and_set_model():
           st.session_state.ruta_ok = False
           st.session_state.selected_engine_key = None
           return
-
       st.session_state.ruta_ok = True
-
       if tipo_valores == "0_1" and session_id is False:
           st.session_state.selected_engine_key = ENGINE_0_1_NO_SID
       elif tipo_valores == "0_1" and session_id is True:
@@ -566,6 +563,72 @@ def render_wizard():
 
   st.markdown('</div>', unsafe_allow_html=True)
 
+def _format_console_blocks(out, engine_key: str | None) -> list[str]:
+  if out is None or getattr(out, "summary", None) is None:
+      return []
+  df = out.summary.copy()
+  if df.empty:
+      return []
+
+  def _pct(x):
+      try:
+          return f"{float(x)*100:.2f}%"
+      except Exception:
+          return str(x)
+
+  blocks = []
+
+  if is_bayes_engine(engine_key):
+      if "dia" not in df.columns or "grupo" not in df.columns:
+          return []
+      for dia, ddf in df.groupby("dia", sort=False):
+          lines = [f"🗓️  {dia}"]
+          for _, r in ddf.sort_values("grupo").iterrows():
+              g = str(r.get("grupo", ""))
+              visitas = r.get("visitas", "")
+              conv = r.get("conversiones", "")
+              acum_v = r.get("acum_visitas", "")
+              acum_c = r.get("acum_conversiones", "")
+              media = r.get("media", "")
+              ci_low = r.get("ci_low", "")
+              ci_high = r.get("ci_high", "")
+              lines.append(f"Grupo {g}:")
+              lines.append(f"  📊 Acumulado: {acum_v} visitas | {acum_c} conversiones")
+              lines.append(f"  Visitas día: {visitas} | Conversiones día: {conv}")
+              lines.append(f"  Media: {_pct(media)}")
+              lines.append(f"  IC 95%: [{_pct(ci_low)}, {_pct(ci_high)}]")
+          blocks.append("\n".join(lines))
+      return blocks
+
+  if is_freq_engine(engine_key):
+      r0 = df.iloc[0].to_dict()
+      lines = ["==================================================", "           ANÁLISIS DE PRECISIÓN B vs A           ", "=================================================="]
+      if "n_visitas_A" in r0 and "n_visitas_B" in r0:
+          lines.append(f"Diseño A             | Visitas: {int(r0.get('n_visitas_A', 0)):>8} | Convs: {int(r0.get('conv_A', 0)):>6}")
+          lines.append(f"Diseño B             | Visitas: {int(r0.get('n_visitas_B', 0)):>8} | Convs: {int(r0.get('conv_B', 0)):>6}")
+      else:
+          ga = str(r0.get("grupo_A_col", "A"))
+          gb = str(r0.get("grupo_B_col", "B"))
+          lines.append(f"{ga} (A): {int(r0.get('n_A', 0))} filas | {float(r0.get('conv_A', 0))} convs | Media: {float(r0.get('media_A', 0)):.4f}")
+          lines.append(f"{gb} (B): {int(r0.get('n_B', 0))} filas | {float(r0.get('conv_B', 0))} convs | Media: {float(r0.get('media_B', 0)):.4f}")
+
+      lines.append("--------------------------------------------------")
+      prec = float(r0.get("precision_B_mejor", 0))
+      lines.append(f"          Precisión de que B > A: {prec*100:.2f}%          ")
+      cd_low = r0.get("ci_diff_low", "")
+      cd_high = r0.get("ci_diff_high", "")
+      try:
+          lines.append(f"            IC 95% Izquierda: {float(cd_low):.5f}            ")
+          lines.append(f"            IC 95% Derecha:   {float(cd_high):.5f}            ")
+      except Exception:
+          lines.append(f"            IC 95% Izquierda: {cd_low}            ")
+          lines.append(f"            IC 95% Derecha:   {cd_high}            ")
+      lines.append("==================================================")
+      blocks.append("\n".join(lines))
+      return blocks
+
+  return []
+
 def render_calculadora_actual():
   st.markdown('<h2 class="main-header">Calculadora para Tests A/B</h2>', unsafe_allow_html=True)
   st.markdown("""
@@ -740,6 +803,12 @@ def render_calculadora_actual():
       if getattr(out, "summary", None) is not None:
           st.subheader("Resumen")
           st.dataframe(out.summary, use_container_width=True)
+
+          console_blocks = _format_console_blocks(out, engine_key)
+          if console_blocks:
+              st.subheader("Salida tipo consola")
+              for b in console_blocks:
+                  st.code(b)
 
       if getattr(out, "log_text", None):
           st.subheader("Interpretación / Log")
