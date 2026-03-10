@@ -28,6 +28,7 @@ class EngineOutput:
     figures: Optional[List[Any]] = None
     pdf_bytes: Optional[bytes] = None
     log_text: Optional[str] = None
+    comparisons: Optional[List[Dict[str, Any]]] = None
 
 
 def get_engine_label(engine_key: Optional[str]) -> str:
@@ -45,6 +46,7 @@ def run_engine(engine_key: str, df: pd.DataFrame, config: Dict[str, Any]) -> Eng
             figures=out.get("figures"),
             pdf_bytes=out.get("pdf_bytes"),
             log_text=out.get("log_text"),
+            comparisons=out.get("comparisons"),
         )
 
     if engine_key == ENGINE_0_INF_NO_SID:
@@ -55,6 +57,7 @@ def run_engine(engine_key: str, df: pd.DataFrame, config: Dict[str, Any]) -> Eng
             figures=out.get("figures"),
             pdf_bytes=out.get("pdf_bytes"),
             log_text=out.get("log_text"),
+            comparisons=out.get("comparisons"),
         )
 
     if engine_key == ENGINE_0_1_SID:
@@ -65,6 +68,7 @@ def run_engine(engine_key: str, df: pd.DataFrame, config: Dict[str, Any]) -> Eng
             figures=out.get("figures"),
             pdf_bytes=out.get("pdf_bytes"),
             log_text=out.get("log_text"),
+            comparisons=out.get("comparisons"),
         )
 
     if engine_key == ENGINE_0_INF_SID:
@@ -75,6 +79,7 @@ def run_engine(engine_key: str, df: pd.DataFrame, config: Dict[str, Any]) -> Eng
             figures=out.get("figures"),
             pdf_bytes=out.get("pdf_bytes"),
             log_text=out.get("log_text"),
+            comparisons=out.get("comparisons"),
         )
 
     if engine_key == ENGINE_FREQ_NO_SID:
@@ -85,6 +90,7 @@ def run_engine(engine_key: str, df: pd.DataFrame, config: Dict[str, Any]) -> Eng
             figures=out.get("figures"),
             pdf_bytes=out.get("pdf_bytes"),
             log_text=out.get("log_text"),
+            comparisons=out.get("comparisons"),
         )
 
     if engine_key == ENGINE_FREQ_SID:
@@ -95,6 +101,7 @@ def run_engine(engine_key: str, df: pd.DataFrame, config: Dict[str, Any]) -> Eng
             figures=out.get("figures"),
             pdf_bytes=out.get("pdf_bytes"),
             log_text=out.get("log_text"),
+            comparisons=out.get("comparisons"),
         )
 
     raise NotImplementedError("Ese motor todavía no está conectado.")

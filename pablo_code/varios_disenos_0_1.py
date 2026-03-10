@@ -13,7 +13,6 @@ from __future__ import annotations
 import io
 import os
 import warnings
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 from itertools import combinations
 
@@ -23,8 +22,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.backends.backend_pdf import PdfPages
 
-# pymc estaba importado en el original pero no se usa en este archivo
-# lo dejo por compatibilidad si Pablo lo necesita después
 try:
     import pymc as pm  # noqa: F401
 except Exception:
@@ -34,14 +31,7 @@ warnings.filterwarnings("ignore", "Glyph .* missing from font")
 sns.set(style="whitegrid")
 
 
-# -------------------------
-# OpenAI (opcional)
-# -------------------------
 def interpretar_con_ia(resultados: Dict[str, Any]) -> str:
-    """
-    Interpretación ejecutiva con OpenAI.
-    Si no hay OPENAI_API_KEY en el entorno, devuelve mensaje informativo.
-    """
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
         return "Interpretación IA no configurada (falta OPENAI_API_KEY)."
@@ -121,9 +111,6 @@ Lenguaje claro, ejecutivo y sin fórmulas.
     return resp.choices[0].message.content
 
 
-# -------------------------
-# Núcleo bayesiano (igual que Pablo)
-# -------------------------
 class ConversionBayesMultiGrupo:
     def __init__(self, priors: Dict[str, Tuple[float, float]]):
         self.priors = priors.copy()
@@ -138,7 +125,7 @@ class ConversionBayesMultiGrupo:
 
         for grupo in grupos:
             alpha0, beta0 = self.priors.get(grupo, (1, 1))
-            visitas, conv = datos[grupo]  # (trials, successes)
+            visitas, conv = datos[grupo]
             alpha_post = alpha0 + conv
             beta_post = beta0 + visitas - conv
 
@@ -168,6 +155,9 @@ class ConversionBayesMultiGrupo:
             self.acumulados[grupo]['conv'] += conv
             self.acumulados[grupo]['visitas'] += visitas
 
+            resultados[f"acum_visitas_{grupo}"] = self.acumulados[grupo]['visitas']
+            resultados[f"acum_clicks_{grupo}"] = self.acumulados[grupo]['conv']
+
         if len(grupos) >= 2:
             a, b = grupos[0], grupos[1]
             total_a = self.acumulados[a]
@@ -186,12 +176,18 @@ class ConversionBayesMultiGrupo:
                 prob_mejor = np.mean(diff > 0)
                 mean_uplift = np.mean(uplift)
                 std_uplift = np.std(uplift)
-                ci_uplift = np.percentile(uplift, [2.5, 97.5])
+
+                ci_centered = np.percentile(uplift, [2.5, 97.5])
+                ci_right = np.percentile(uplift, [5.0, 100.0])
+                ci_left = np.percentile(uplift, [0.0, 95.0])
 
                 resultados[f"{a}_vs_{b}"] = {
                     'uplift_media': mean_uplift,
                     'uplift_std': std_uplift,
-                    'uplift_ci': ci_uplift,
+                    'uplift_ci': ci_centered,
+                    'ci_centered': ci_centered,
+                    'ci_right': ci_right,
+                    'ci_left': ci_left,
                     'prob_mejor': prob_mejor,
                     'ganador': a if prob_mejor >= 0.95 else None,
                     'diff': diff,
@@ -201,9 +197,6 @@ class ConversionBayesMultiGrupo:
         self.historial.append(resultados)
 
     def mostrar_resultados_con_graficos(self, pdf: Optional[PdfPages] = None, show: bool = False) -> List[plt.Figure]:
-        """
-        Devuelve una lista de figuras. En modo Streamlit usaremos show=False y pintaremos con st.pyplot().
-        """
         figs: List[plt.Figure] = []
 
         for paso in self.historial:
@@ -224,7 +217,6 @@ class ConversionBayesMultiGrupo:
                     f"  IC 95%: [{stats['ci'][0]*100:.2f}%, {stats['ci'][1]*100:.2f}%]"
                 ]
 
-            # Página texto (PDF)
             if pdf is not None:
                 fig_text = plt.figure(figsize=(8.27, 11.69))
                 fig_text.clf()
@@ -232,7 +224,6 @@ class ConversionBayesMultiGrupo:
                 pdf.savefig(fig_text)
                 plt.close(fig_text)
 
-            # Fig distribuciones
             fig1 = plt.figure(figsize=(10, 5))
             for grupo in grupos:
                 muestras = paso[grupo]['muestras']
@@ -249,18 +240,24 @@ class ConversionBayesMultiGrupo:
                 plt.show()
             plt.close(fig1)
 
-            # Comparaciones
             comparaciones = [k for k in paso if "_vs_" in k]
             for clave in comparaciones:
                 stats = paso[clave]
                 g1, g2 = clave.split("_vs_")
 
+                str_cent = f"[{stats['ci_centered'][0]*100:.2f}%, {stats['ci_centered'][1]*100:.2f}%]"
+                str_right = f"> {stats['ci_right'][0]*100:.2f}%"
+                str_left = f"< {stats['ci_left'][1]*100:.2f}%"
+
                 comp_lines = [
                     f"\n📈 Uplift (relativo {g1} vs {g2}):",
-                    f"  Media: {stats['uplift1']*100:.2f}%" if stats.get("uplift1") is not None else "  Media: N/A",
-                    f"  Desviación estándar: {stats['uplift_std']*100:.2f}%",
-                    f"  IC 95%: [{stats['uplift_ci'][0]*100:.2f}%, {stats['uplift_ci'][1]*100:.2f}%]",
-                    f"\n📊 Probabilidad de que {g1} > {g2}: {stats['prob_mejor']*100:.2f}%"
+                    f"  Media estimada: {stats['uplift_media']*100:.2f}%",
+                    f"  ---------------------------------------------",
+                    f"  1. IC Centrado:   {str_cent} (Estándar)",
+                    f"  2. IC Suelo:      {str_right} (Mínimo asegurado 95%)",
+                    f"  3. IC Techo:      {str_left} (Máximo riesgo 95%)",
+                    f"  ---------------------------------------------",
+                    f"  Probabilidad de que {g1} > {g2}: {stats['prob_mejor']*100:.2f}%"
                 ]
 
                 if stats.get('ganador'):
@@ -303,9 +300,6 @@ class ConversionBayesMultiGrupo:
         return figs
 
 
-# -------------------------
-# Helpers de entrada/salida
-# -------------------------
 def _build_priors_from_expected(expected: Dict[str, Tuple[int, int]]) -> Dict[str, Tuple[int, int]]:
     priors: Dict[str, Tuple[int, int]] = {}
     for grupo, (conversiones, visitas) in expected.items():
@@ -322,12 +316,6 @@ def _build_priors_from_expected(expected: Dict[str, Tuple[int, int]]) -> Dict[st
 
 
 def _extract_daily_data_from_aggregate_row(row: pd.Series) -> Dict[str, Tuple[int, int]]:
-    """
-    Convierte una fila agregada (un día) en datos por grupo:
-      "Conversiones X" + "Visitas X"  ->  (visitas, conversiones)
-
-    Importante: en el original, el script asumía columnas "Conversiones " y "Visitas ".
-    """
     datos: Dict[str, Tuple[int, int]] = {}
     for col in row.index:
         if str(col).startswith("Conversiones "):
@@ -341,9 +329,6 @@ def _extract_daily_data_from_aggregate_row(row: pd.Series) -> Dict[str, Tuple[in
 
 
 def _build_summary_from_historial(historial: List[Dict[str, Any]]) -> pd.DataFrame:
-    """
-    Crea un dataframe resumen por día y por grupo con medias e intervalos.
-    """
     records = []
     for paso in historial:
         dia = paso.get("dia")
@@ -359,23 +344,13 @@ def _build_summary_from_historial(historial: List[Dict[str, Any]]) -> pd.DataFra
                 "visitas": paso.get(f"visitas_{g}"),
                 "conversiones": paso.get(f"conv_{g}"),
                 "tasa_observada": paso.get(f"tasa_{g}"),
+                "acum_visitas": paso.get(f"acum_visitas_{g}"),
+                "acum_conversiones": paso.get(f"acum_clicks_{g}"),
             })
     return pd.DataFrame.from_records(records)
 
 
-# -------------------------
-# API principal para Streamlit
-# -------------------------
 def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """
-    Ejecuta el análisis [0,1] sin sessionid (agregado por día).
-
-    config (opcional):
-      - expected_priors: dict grupo -> (conv_esperadas, visitas_esperadas)
-      - num_samples: int (default 100000)
-      - generate_pdf: bool (default False)
-      - include_ai: bool (default False)
-    """
     config = config or {}
     num_samples = int(config.get("num_samples", 100000))
     generate_pdf = bool(config.get("generate_pdf", False))
@@ -383,8 +358,6 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
 
     expected_priors = config.get("expected_priors")
     if not isinstance(expected_priors, dict) or not expected_priors:
-        # default "suave" (equivalente al original donde ponían A,B,C = (1,1))
-        # aquí expected es (conv, visitas)
         expected_priors = {"A": (1, 1), "B": (1, 1)}
 
     priors = _build_priors_from_expected(expected_priors)
@@ -393,14 +366,12 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
 
     modelo = ConversionBayesMultiGrupo(priors)
 
-    # ejecutar por día (df agregado)
     for _, row in df.iterrows():
         dia = f"Día {int(row['Día'])}" if "Día" in row.index else None
         datos = _extract_daily_data_from_aggregate_row(row)
         if datos:
             modelo.actualizar_con_datos(datos, dia=dia, num_samples=num_samples)
 
-    # Generar PDF en memoria si se pide
     pdf_bytes: Optional[bytes] = None
     figs: List[plt.Figure] = []
     if generate_pdf:
@@ -413,7 +384,6 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
 
     summary = _build_summary_from_historial(modelo.historial)
 
-    # IA opcional: usar último paso del historial “en bruto”
     ai_text: Optional[str] = None
     if include_ai and modelo.historial:
         try:
@@ -426,12 +396,10 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
         "figures": figs,
         "pdf_bytes": pdf_bytes,
         "log_text": ai_text,
+        "comparisons": modelo.historial,
     }
 
 
-# -------------------------
-# CLI (mantener modo "script")
-# -------------------------
 def main():
     import argparse
 

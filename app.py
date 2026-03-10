@@ -563,6 +563,86 @@ def render_wizard():
 
   st.markdown('</div>', unsafe_allow_html=True)
 
+def _parse_interval_value(val):
+  if val is None:
+      return None
+
+  if isinstance(val, (list, tuple)):
+      try:
+          return [float(val[0]), float(val[1])]
+      except Exception:
+          return None
+
+  if hasattr(val, "__len__") and not isinstance(val, str):
+      try:
+          return [float(val[0]), float(val[1])]
+      except Exception:
+          pass
+
+  if isinstance(val, str):
+      txt = val.strip()
+      txt = txt.replace("array(", "").replace(")", "").replace("[", "").replace("]", "")
+      parts = [p.strip() for p in txt.split(",") if p.strip()]
+      if len(parts) >= 2:
+          try:
+              return [float(parts[0]), float(parts[1])]
+          except Exception:
+              return None
+
+  return None
+
+def _get_bayes_comparison_lines(out, dia, g1, g2):
+  comparisons = getattr(out, "comparisons", None)
+  if not comparisons:
+      return []
+
+  paso_objetivo = None
+  for paso in comparisons:
+      if str(paso.get("dia")) == str(dia):
+          paso_objetivo = paso
+          break
+
+  if paso_objetivo is None:
+      return []
+
+  clave = f"{g1}_vs_{g2}"
+  stats = paso_objetivo.get(clave)
+  if not isinstance(stats, dict):
+      return []
+
+  try:
+      media_estim = float(stats.get("uplift_media", 0)) * 100
+  except Exception:
+      media_estim = 0.0
+
+  try:
+      prob_mejor = float(stats.get("prob_mejor", 0)) * 100
+  except Exception:
+      prob_mejor = 0.0
+
+  ci_centered = _parse_interval_value(stats.get("ci_centered"))
+  ci_right = _parse_interval_value(stats.get("ci_right"))
+  ci_left = _parse_interval_value(stats.get("ci_left"))
+
+  if ci_centered is None or ci_right is None or ci_left is None:
+      return []
+
+  str_cent = f"[{ci_centered[0]*100:.2f}%, {ci_centered[1]*100:.2f}%]"
+  str_right = f"> {ci_right[0]*100:.2f}%"
+  str_left = f"< {ci_left[1]*100:.2f}%"
+
+  return [
+      "",
+      f"📈 Uplift (relativo {g1} vs {g2}):",
+      f"  Media estimada: {media_estim:.2f}%",
+      f"  ---------------------------------------------",
+      f"  1. IC Centrado:   {str_cent} (Estándar)",
+      f"  2. IC Suelo:      {str_right} (Mínimo asegurado 95%)",
+      f"  3. IC Techo:      {str_left} (Máximo riesgo 95%)",
+      f"  ---------------------------------------------",
+      f"  Probabilidad de que {g1} > {g2}: {prob_mejor:.2f}%"
+  ]
+
 def _format_console_blocks(out, engine_key: str | None) -> list[str]:
   if out is None or getattr(out, "summary", None) is None:
       return []
@@ -581,10 +661,16 @@ def _format_console_blocks(out, engine_key: str | None) -> list[str]:
   if is_bayes_engine(engine_key):
       if "dia" not in df.columns or "grupo" not in df.columns:
           return []
+
       for dia, ddf in df.groupby("dia", sort=False):
+          ddf_sorted = ddf.sort_values("grupo")
           lines = [f"🗓️  {dia}"]
-          for _, r in ddf.sort_values("grupo").iterrows():
+
+          grupos_en_dia = []
+
+          for _, r in ddf_sorted.iterrows():
               g = str(r.get("grupo", ""))
+              grupos_en_dia.append(g)
               visitas = r.get("visitas", "")
               conv = r.get("conversiones", "")
               acum_v = r.get("acum_visitas", "")
@@ -592,11 +678,19 @@ def _format_console_blocks(out, engine_key: str | None) -> list[str]:
               media = r.get("media", "")
               ci_low = r.get("ci_low", "")
               ci_high = r.get("ci_high", "")
+
               lines.append(f"Grupo {g}:")
               lines.append(f"  📊 Acumulado: {acum_v} visitas | {acum_c} conversiones")
               lines.append(f"  Visitas día: {visitas} | Conversiones día: {conv}")
               lines.append(f"  Media: {_pct(media)}")
               lines.append(f"  IC 95%: [{_pct(ci_low)}, {_pct(ci_high)}]")
+
+          if len(grupos_en_dia) >= 2:
+              g1 = grupos_en_dia[0]
+              g2 = grupos_en_dia[1]
+              lines.extend(_get_bayes_comparison_lines(out, dia, g1, g2))
+              lines.extend(_get_bayes_comparison_lines(out, dia, g2, g1))
+
           blocks.append("\n".join(lines))
       return blocks
 
