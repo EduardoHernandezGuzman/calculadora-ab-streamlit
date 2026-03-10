@@ -798,7 +798,9 @@ def render_calculadora_actual():
 
       if getattr(out, "summary", None) is not None:
           st.subheader("Resumen")
-          st.dataframe(out.summary, use_container_width=True)
+          summary_df = out.summary.copy()
+          summary_df = summary_df[[c for c in summary_df.columns if not c.startswith("ci_")]]
+          st.dataframe(summary_df, use_container_width=True)
 
           console_blocks = _format_console_blocks(out, engine_key)
           if console_blocks:
