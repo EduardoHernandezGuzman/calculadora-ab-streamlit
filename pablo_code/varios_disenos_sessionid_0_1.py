@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import warnings
 from collections import defaultdict
-from dataclasses import dataclass
 from io import BytesIO
 from itertools import combinations
 from typing import Any, Dict, List, Optional, Tuple
@@ -29,14 +28,7 @@ warnings.filterwarnings("ignore", "Glyph .* missing from font")
 sns.set(style="whitegrid")
 
 
-# -------------------------
-# IA (opcional)
-# -------------------------
 def _interpretar_con_ia(resultados_ultimo_dia: Dict[str, Any]) -> str:
-    """
-    Genera interpretación ejecutiva (opcional) usando OpenAI si include_ai=True.
-    Requiere OPENAI_API_KEY en entorno.
-    """
     try:
         from openai import OpenAI  # type: ignore
         client = OpenAI()
@@ -100,12 +92,9 @@ Lenguaje claro, ejecutivo y sin fórmulas.
         return f"[IA] Error llamando a OpenAI: {e}"
 
 
-# -------------------------
-# Núcleo Bayes Beta con acumulados
-# -------------------------
 class ConversionBayesBeta:
     def __init__(self, priors: Dict[str, Tuple[float, float]]):
-        self.priors = priors.copy()  # alpha0, beta0
+        self.priors = priors.copy()
         self.historial: List[Dict[str, Any]] = []
         self.acumulados = defaultdict(lambda: {"clicks": 0.0, "visitas": 0.0})
 
@@ -124,7 +113,6 @@ class ConversionBayesBeta:
         muestras: Dict[str, np.ndarray] = {}
         grupos = list(datos.keys())
 
-        # 1) Posteriors por grupo con acumulados
         for grupo in grupos:
             alpha0, beta0 = self.priors.get(grupo, (1.0, 1.0))
             visitas_dia, clicks_dia = datos[grupo]
@@ -156,7 +144,6 @@ class ConversionBayesBeta:
                 "muestras": muestras_array,
             }
 
-        # 2) Comparaciones
         for g1, g2 in combinations(grupos, 2):
             for (a, b) in [(g1, g2), (g2, g1)]:
                 tasa_a = muestras[a]
@@ -187,9 +174,6 @@ class ConversionBayesBeta:
         self.historial.append(resultados)
 
 
-# -------------------------
-# Figuras (sin plt.show)
-# -------------------------
 def _fig_histograma_raw(dia: str, raw_data: pd.DataFrame) -> Optional[plt.Figure]:
     if raw_data is None or raw_data.empty:
         return None
@@ -247,22 +231,13 @@ def _fig_diff(dia: str, stats: Dict[str, Any], g1: str, g2: str) -> plt.Figure:
     return fig
 
 
-# -------------------------
-# Helpers: priors y agregación
-# -------------------------
 def _build_beta_priors(expected_priors: Optional[Dict[str, Tuple[float, float]]], grupos: List[str]) -> Dict[str, Tuple[float, float]]:
-    """
-    expected_priors: { 'A': (conv_esperadas, visitas_esperadas), ... }
-    Devuelve { 'A': (alpha0, beta0), ... }
-    Si no viene, uniformes (1,1).
-    """
     if not expected_priors:
         return {g: (1.0, 1.0) for g in grupos}
 
     priors: Dict[str, Tuple[float, float]] = {}
     for g in grupos:
         conv, visitas = expected_priors.get(g, (0.0, 0.0))
-        # Beta: alpha = éxitos + 1; beta = fracasos + 1
         alpha0 = float(conv) + 1.0
         beta0 = float(visitas - conv) + 1.0 if visitas >= conv else 1.0
         priors[g] = (alpha0, beta0)
@@ -279,11 +254,6 @@ def _infer_grupos_from_columns(df: pd.DataFrame) -> List[str]:
 
 
 def _aggregate_by_day_sessionid(df: pd.DataFrame, grupos: List[str]) -> List[Tuple[Any, pd.DataFrame, Dict[str, Tuple[int, int]]]]:
-    """
-    Devuelve lista de tuplas:
-      (dia_val, df_dia_raw, datos_agregados_por_grupo)
-    donde datos_agregados_por_grupo[g] = (visitas, conversiones)
-    """
     if "Día" not in df.columns:
         raise ValueError("Falta la columna 'Día' en el CSV.")
 
@@ -298,8 +268,8 @@ def _aggregate_by_day_sessionid(df: pd.DataFrame, grupos: List[str]) -> List[Tup
             col = f"Conversiones {g}"
             if col not in df_dia.columns:
                 raise ValueError(f"Falta la columna '{col}' en el CSV.")
-            visitas = int(df_dia[col].count())   # count ignora NaN
-            conv = float(df_dia[col].sum(skipna=True))  # suma 1s
+            visitas = int(df_dia[col].count())
+            conv = float(df_dia[col].sum(skipna=True))
             datos_agregados[g] = (visitas, int(conv))
 
         out.append((dia_val, df_dia, datos_agregados))
@@ -307,37 +277,19 @@ def _aggregate_by_day_sessionid(df: pd.DataFrame, grupos: List[str]) -> List[Tup
     return out
 
 
-# -------------------------
-# API pública del motor
-# -------------------------
 def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """
-    Ejecuta el motor.
-
-    config:
-      - num_samples: int (default 20000)
-      - generate_pdf: bool (default False)
-      - include_ai: bool (default False)
-      - expected_priors: dict opcional {'A': (conv_exp, visitas_exp), ...}
-    """
     config = config or {}
     num_samples = int(config.get("num_samples", 20000))
     generate_pdf = bool(config.get("generate_pdf", False))
     include_ai = bool(config.get("include_ai", False))
-    expected_priors = config.get("expected_priors")  # puede ser None
+    expected_priors = config.get("expected_priors")
 
-    # Detectar grupos
     grupos = _infer_grupos_from_columns(df)
     if not grupos:
         raise ValueError("No se detectaron columnas 'Conversiones X'. Ej: 'Conversiones A', 'Conversiones B'.")
 
-    # Priors
     priors = _build_beta_priors(expected_priors, grupos)
-
-    # Modelo
     modelo = ConversionBayesBeta(priors=priors)
-
-    # Agregar por día usando SessionID (raw por sesión)
     agregados = _aggregate_by_day_sessionid(df, grupos)
 
     figures: List[plt.Figure] = []
@@ -356,12 +308,10 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
         paso = modelo.historial[-1]
         grupos_stats = [g for g in paso if isinstance(paso.get(g), dict) and "media" in paso[g]]
 
-        # Summary por grupo
         for g in grupos_stats:
             total_visitas = int(paso.get(f"acum_visitas_{g}", 0))
             total_conv = int(paso.get(f"acum_clicks_{g}", 0))
 
-            # observados del día (no acumulados) para que UI tenga algo más “día”
             visitas_dia, conv_dia = datos_agregados[g]
             tasa_obs = (conv_dia / visitas_dia) if visitas_dia > 0 else 0.0
 
@@ -378,14 +328,12 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
                 "acum_conversiones": total_conv,
             })
 
-        # Figuras por día
         f0 = _fig_histograma_raw(dia_label, df_dia_raw)
         if f0 is not None:
             figures.append(f0)
 
         figures.append(_fig_posteriors_beta(dia_label, paso, grupos_stats))
 
-        # Dif por comparaciones (solo A vs B típico, pero soporta multi)
         comparaciones = [k for k in paso.keys() if isinstance(k, str) and "_vs_" in k]
         for clave in comparaciones:
             stats = paso[clave]
@@ -394,7 +342,6 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
 
     summary_df = pd.DataFrame(summary_rows)
 
-    # PDF opcional
     pdf_bytes: Optional[bytes] = None
     if generate_pdf:
         buffer = BytesIO()
@@ -404,7 +351,6 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
         buffer.seek(0)
         pdf_bytes = buffer.read()
 
-    # IA opcional (último día)
     if include_ai:
         if modelo.historial:
             log_parts.append("🤖 Interpretación IA (último día):")
@@ -412,12 +358,10 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
         else:
             log_parts.append("[IA] No hay historial para interpretar.")
 
-    # Importante: cerramos figs? No, Streamlit las necesita vivas.
-    # Si en algún momento ves consumo alto, se puede cerrar después de st.pyplot.
-
     return {
         "summary": summary_df,
         "figures": figures,
         "pdf_bytes": pdf_bytes,
         "log_text": "\n\n".join(log_parts) if log_parts else "",
+        "comparisons": modelo.historial,
     }
