@@ -419,6 +419,9 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
         "figures": figs,
         "pdf_bytes": pdf_bytes,
         "log_text": ai_text,
+        "comparisons": modelo_gamma.historial,
+
+
     }
 
 
