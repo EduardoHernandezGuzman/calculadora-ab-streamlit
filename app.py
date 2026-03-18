@@ -203,7 +203,7 @@ def reset_wizard():
     st.session_state.enfoque = None
     st.session_state.session_id = None
     st.session_state.tipo_valores = None
-    st.session_state.freq_interval_type = None  # "centrado" | "derecha" | "izquierda"
+    st.session_state.freq_interval_type = None
     st.session_state.ruta_ok = False
     st.session_state.selected_engine_key = None
     st.session_state.show_app = False
@@ -327,9 +327,6 @@ def render_wizard():
         scroll_to_anchor(pending)
         st.session_state.pending_scroll_to = None
 
-    # =======================
-    # STEP 1
-    # =======================
     step_open(1)
 
     st.markdown(
@@ -436,9 +433,6 @@ def render_wizard():
 
     step_close()
 
-    # =======================
-    # STEP 2
-    # =======================
     if step >= 2:
         step_open(2)
 
@@ -509,9 +503,6 @@ def render_wizard():
 
         step_close()
 
-    # =======================
-    # STEP 3 BAYES
-    # =======================
     if step >= 3 and st.session_state.get("enfoque") == "bayesiano":
         step_open(3)
 
@@ -594,9 +585,6 @@ def render_wizard():
 
         step_close()
 
-    # =======================
-    # STEP 3 FRECUENTISTA
-    # =======================
     if step >= 3 and st.session_state.get("enfoque") == "frecuentista":
         step_open(3)
 
@@ -688,9 +676,6 @@ def render_wizard():
 
         step_close()
 
-    # =======================
-    # STEP 4 FINAL
-    # =======================
     if step >= 4:
         step_open(4)
         st.markdown('<div class="subsection-spacer"></div>', unsafe_allow_html=True)
@@ -1013,14 +998,7 @@ def render_calculadora_actual():
         st.markdown('<p class="sub-header">Opciones de ejecución</p>', unsafe_allow_html=True)
 
         if is_bayes_engine(engine_key):
-            num_samples = st.number_input(
-                "Número de muestras (simulación)",
-                min_value=5000,
-                max_value=200000,
-                value=20000,
-                step=5000,
-                help="A más muestras, más estable el resultado (y más lento).",
-            )
+            st.session_state.num_samples = 20000
             generate_pdf = st.checkbox(
                 "Generar PDF",
                 value=False,
@@ -1032,19 +1010,11 @@ def render_calculadora_actual():
                 help="Solo si tienes OPENAI_API_KEY configurada en el entorno.",
             )
 
-            st.session_state.num_samples = int(num_samples)
             st.session_state.generate_pdf = bool(generate_pdf)
             st.session_state.include_ai = bool(include_ai)
 
         elif is_freq_engine(engine_key):
-            n_iteraciones = st.number_input(
-                "Iteraciones (bootstrap)",
-                min_value=1000,
-                max_value=200000,
-                value=10000,
-                step=1000,
-                help="A más iteraciones, más estable el resultado (y más lento).",
-            )
+            st.session_state.n_iteraciones = 10000
             generate_pdf = st.checkbox(
                 "Generar PDF",
                 value=False,
@@ -1056,7 +1026,6 @@ def render_calculadora_actual():
                 help="Solo si tienes OPENAI_API_KEY configurada en el entorno.",
             )
 
-            st.session_state.n_iteraciones = int(n_iteraciones)
             st.session_state.generate_pdf = bool(generate_pdf)
             st.session_state.include_ai = bool(include_ai)
 
