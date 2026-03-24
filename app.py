@@ -29,68 +29,68 @@ st.markdown(
     """
 <style>
 :root {
---primary-color: #6366f1;
---secondary-color: #8b5cf6;
---success-color: #10b981;
---warning-color: #f59e0b;
---error-color: #ef4444;
---info-color: #3b82f6;
---background-light: #f8fafc;
---background-card: #ffffff;
---text-primary: #1e293b;
---text-secondary: #64748b;
---border-color: #e2e8f0;
+    --primary-color: #6366f1;
+    --secondary-color: #8b5cf6;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --error-color: #ef4444;
+    --info-color: #3b82f6;
+    --background-light: #f8fafc;
+    --background-card: #ffffff;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
 }
 
 .main-header {
-font-size: 2.5rem;
-color: var(--primary-color);
-font-weight: 700;
-margin-bottom: 2rem;
-text-align: center;
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    font-weight: 700;
+    margin-bottom: 2rem;
+    text-align: center;
 }
 
 .sub-header {
-font-size: 1.5rem;
-color: var(--text-primary);
-font-weight: 600;
-margin: 1.5rem 0;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    margin: 1.5rem 0;
 }
 
 .success-box {
-background: linear-gradient(135deg, #10b981, #059669);
-color: white;
-padding: 1.25rem;
-border-radius: 12px;
-margin: 1.5rem 0;
-box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 1.25rem;
+    border-radius: 12px;
+    margin: 1.5rem 0;
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);
 }
 
 .info-box {
-background: linear-gradient(135deg, var(--info-color), var(--primary-color));
-color: white;
-padding: 1.25rem;
-border-radius: 12px;
-margin: 1.5rem 0;
-box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1);
+    background: linear-gradient(135deg, var(--info-color), var(--primary-color));
+    color: white;
+    padding: 1.25rem;
+    border-radius: 12px;
+    margin: 1.5rem 0;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1);
 }
 
 .warning-box {
-background: linear-gradient(135deg, var(--warning-color), #d97706);
-color: white;
-padding: 1.25rem;
-border-radius: 12px;
-margin: 1.5rem 0;
-box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.1);
+    background: linear-gradient(135deg, var(--warning-color), #d97706);
+    color: white;
+    padding: 1.25rem;
+    border-radius: 12px;
+    margin: 1.5rem 0;
+    box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.1);
 }
 
 .error-box {
-background: linear-gradient(135deg, var(--error-color), #dc2626);
-color: white;
-padding: 1.25rem;
-border-radius: 12px;
-margin: 1.5rem 0;
-box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1);
+    background: linear-gradient(135deg, var(--error-color), #dc2626);
+    color: white;
+    padding: 1.25rem;
+    border-radius: 12px;
+    margin: 1.5rem 0;
+    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1);
 }
 
 .section-spacer { margin: 3rem 0; }
@@ -99,98 +99,122 @@ box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1);
 .stTabs [data-baseweb="tab-list"] { gap: 8px; }
 
 .stTabs [data-baseweb="tab"] {
-height: 50px;
-padding-left: 20px;
-padding-right: 20px;
-background-color: var(--background-light);
-border-radius: 8px;
-color: var(--text-secondary);
-font-weight: 500;
+    height: 50px;
+    padding-left: 20px;
+    padding-right: 20px;
+    background-color: var(--background-light);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
 .stTabs [aria-selected="true"] {
-background-color: #10b981 !important;
-color: white !important;
+    background-color: #10b981 !important;
+    color: white !important;
 }
 
 .stButton > button {
-background: linear-gradient(135deg, #64748b, #475569);
-color: white;
-border: none;
-border-radius: 8px;
-padding: 0.6rem 1.5rem;
-font-weight: 600;
-transition: all 0.3s ease;
+    background: linear-gradient(135deg, #64748b, #475569);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
 }
 
 .stButton > button:hover {
-background: linear-gradient(135deg, #475569, #334155);
-transform: translateY(-2px);
-box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
+    background: linear-gradient(135deg, #475569, #334155);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
 }
 
 .stButton > button[kind="primary"] {
-background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #10b981, #059669);
 }
 
 .stButton > button[kind="primary"]:hover {
-background: linear-gradient(135deg, #059669, #047857);
-box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    background: linear-gradient(135deg, #059669, #047857);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .result-card {
-background: var(--background-card);
-padding: 2rem;
-border-radius: 16px;
-border: 1px solid var(--border-color);
-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-margin: 1.5rem 0;
-}
-
-.choice-card {
-background: var(--background-card);
-padding: 1.6rem;
-border-radius: 16px;
-border: 1px solid var(--border-color);
-box-shadow: 0 4px 10px rgba(0,0,0,0.06);
-height: 100%;
+    background: var(--background-card);
+    padding: 2rem;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin: 1.5rem 0;
 }
 
 .choice-title {
-font-size: 1.25rem;
-font-weight: 700;
-color: var(--text-primary);
-margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
 }
 
 .choice-text {
-color: var(--text-secondary);
-line-height: 1.5;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* Cards nativas de Streamlit estilizadas como choice-cards */
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: var(--background-card) !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06) !important;
+    padding: 0.4rem 0.4rem 1rem 0.4rem !important;
+    height: 100%;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]
+> div[data-testid="stVerticalBlock"] {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* Espacio entre el texto y el botón dentro de las cards */
+div[data-testid="stVerticalBlockBorderWrapper"] .stButton {
+    margin-top: 1.4rem;
+}
+
+/* Botones dentro de cards: tamaño natural, no full width */
+div[data-testid="stVerticalBlockBorderWrapper"] .stButton > button {
+    width: auto !important;
+}
+
+/* Botón Analizar test A/B: tamaño contenido, no full width */
+div[data-testid="stColumn"] .stButton > button[kind="primary"] {
+    width: auto !important;
 }
 
 .center-wrap {
-max-width: 1050px;
-margin: 0 auto;
+    max-width: 1050px;
+    margin: 0 auto;
 }
 
 .step-block {
-margin: 0 0 2rem 0;
+    margin: 0 0 2rem 0;
 }
 
 .step-content {
-transition: filter .2s ease, opacity .2s ease, transform .2s ease;
+    transition: filter .2s ease, opacity .2s ease, transform .2s ease;
 }
 
 .step-done .step-content {
-filter: blur(2.5px);
-opacity: 0.65;
-transform: scale(0.997);
+    filter: blur(2.5px);
+    opacity: 0.65;
+    transform: scale(0.997);
 }
 
 .step-active .step-content {
-filter: none;
-opacity: 1;
-transform: none;
+    filter: none;
+    opacity: 1;
+    transform: none;
 }
 </style>
 """,
@@ -286,13 +310,13 @@ def check_route_and_set_model():
 def scroll_to_anchor(anchor_id: str):
     components.html(
         f"""
-      <script>
-        const el = window.parent.document.getElementById("{anchor_id}");
-        if (el) {{
-          el.scrollIntoView({{ behavior: "smooth", block: "center" }});
-        }}
-      </script>
-      """,
+        <script>
+            const el = window.parent.document.getElementById("{anchor_id}");
+            if (el) {{
+                el.scrollIntoView({{ behavior: "smooth", block: "center" }});
+            }}
+        </script>
+        """,
         height=0,
     )
 
@@ -327,27 +351,30 @@ def render_wizard():
         scroll_to_anchor(pending)
         st.session_state.pending_scroll_to = None
 
+    # ─────────────────────────────────────────────────────────────
+    # PASO 1
+    # ─────────────────────────────────────────────────────────────
     step_open(1)
 
     st.markdown(
         """
-  <div class="result-card">
-      <div class="choice-title">¡Bienvenido a la calculadora de tests A/B!</div>
-      <div class="choice-text">
-          Esta calculadora te ayudará a tomar decisiones basadas en datos eligiendo entre el enfoque bayesiano o frecuentista.
-      </div>
-  </div>
-  """,
+        <div class="result-card">
+          <div class="choice-title">¡Bienvenido a la calculadora de tests A/B!</div>
+          <div class="choice-text">
+              Esta calculadora te ayudará a tomar decisiones basadas en datos eligiendo entre el enfoque bayesiano o frecuentista.
+          </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
     st.markdown(
         """
-  <div class="result-card">
-      <div class="choice-title">Elige el modelo que deseas utilizar para analizar tu test A/B</div>
-      <div class="choice-text">¿No sabes cuál elegir? No te preocupes: te explico cada uno de forma sencilla.</div>
-  </div>
-  """,
+        <div class="result-card">
+          <div class="choice-title">Elige el modelo que deseas utilizar para analizar tu test A/B</div>
+          <div class="choice-text">¿No sabes cuál elegir? No te preocupes: te explico cada uno de forma sencilla.</div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
@@ -355,66 +382,75 @@ def render_wizard():
         col1, col2 = st.columns(2, gap="large")
 
         with col1:
-            st.markdown(
-                """
-          <div class="choice-card">
-              <div class="choice-title">Modelo Bayesiano</div>
-              <div class="choice-text">
-                  El enfoque bayesiano interpreta los resultados en términos de probabilidad directa.
-                  <br><br>
-                  En lugar de preguntarse “¿es este resultado estadísticamente significativo?”, responde preguntas como:
-                  “¿cuál es la probabilidad de que la variante B sea mejor que la A?”
-                  <br><br>
-                  <ul>
-                      <li>No necesitas un tamaño de muestra fijo.</li>
-                      <li>Análisis de resultados basado en probabilidad.</li>
-                      <li>Decisión más rápida: puedes parar el test cuando desees.</li>
-                  </ul>
-              </div>
-          </div>
-          """,
-                unsafe_allow_html=True,
-            )
-            if st.button("Elegir modelo Bayesiano", key="btn_bayesiano", type="primary"):
-                st.session_state.enfoque = "bayesiano"
-                st.session_state.session_id = None
-                st.session_state.tipo_valores = None
-                st.session_state.freq_interval_type = None
-                go_to_step(2)
+            with st.container(border=True):
+                st.markdown(
+                    """
+                    <div class="choice-title">Modelo Bayesiano</div>
+                    <div class="choice-text">
+                        El enfoque bayesiano interpreta los resultados en términos de probabilidad directa.
+                        <br><br>
+                        En lugar de preguntarse "¿es este resultado estadísticamente significativo?", responde preguntas como:
+                        "¿cuál es la probabilidad de que la variante B sea mejor que la A?"
+                        <br><br>
+                        <ul>
+                            <li>No necesitas un tamaño de muestra fijo.</li>
+                            <li>Análisis de resultados basado en probabilidad.</li>
+                            <li>Decisión más rápida: puedes parar el test cuando desees.</li>
+                        </ul>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                if st.button(
+                    "Elegir modelo Bayesiano",
+                    key="btn_bayesiano",
+                    type="primary",
+                ):
+                    st.session_state.enfoque = "bayesiano"
+                    st.session_state.session_id = None
+                    st.session_state.tipo_valores = None
+                    st.session_state.freq_interval_type = None
+                    go_to_step(2)
 
         with col2:
-            st.markdown(
-                """
-          <div class="choice-card">
-              <div class="choice-title">Modelo Frecuentista</div>
-              <div class="choice-text">
-                  El enfoque frecuentista se centra en comprobar si la diferencia observada podría deberse al azar,
-                  respondiendo preguntas como: “¿la diferencia entre A y B es estadísticamente significativa?”
-                  o “¿podemos rechazar la hipótesis nula?”.
-                  <br><br>
-                  <ul>
-                      <li>Debes calcular previamente la muestra y esperar hasta alcanzarla.</li>
-                      <li>Análisis de resultados basado en p-value.</li>
-                  </ul>
-              </div>
-          </div>
-          """,
-                unsafe_allow_html=True,
-            )
-            if st.button("Elegir modelo Frecuentista", key="btn_frecuentista", type="primary"):
-                st.session_state.enfoque = "frecuentista"
-                st.session_state.session_id = None
-                st.session_state.tipo_valores = None
-                st.session_state.freq_interval_type = None
-                go_to_step(2)
+            with st.container(border=True):
+                st.markdown(
+                    """
+                    <div class="choice-title">Modelo Frecuentista</div>
+                    <div class="choice-text">
+                        El enfoque frecuentista se centra en comprobar si la diferencia observada podría deberse al azar,
+                        respondiendo preguntas como: "¿la diferencia entre A y B es estadísticamente significativa?"
+                        o "¿podemos rechazar la hipótesis nula?".
+                        <br><br>
+                        <ul>
+                            <li>Debes calcular previamente la muestra y esperar hasta alcanzarla.</li>
+                            <li>Análisis de resultados basado en p-value.</li>
+                        </ul>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                if st.button(
+                    "Elegir modelo Frecuentista",
+                    key="btn_frecuentista",
+                    type="primary",
+                ):
+                    st.session_state.enfoque = "frecuentista"
+                    st.session_state.session_id = None
+                    st.session_state.tipo_valores = None
+                    st.session_state.freq_interval_type = None
+                    go_to_step(2)
+
     else:
-        enfoque_txt = "Bayesiano" if st.session_state.enfoque == "bayesiano" else "Frecuentista"
+        enfoque_txt = (
+            "Bayesiano" if st.session_state.enfoque == "bayesiano" else "Frecuentista"
+        )
         st.markdown(
             f"""
-      <div class="success-box">
-          ✅ Seleccionado: <b>{enfoque_txt}</b>
-      </div>
-      """,
+            <div class="success-box">
+                ✅ Seleccionado: <b>{enfoque_txt}</b>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
@@ -433,60 +469,102 @@ def render_wizard():
 
     step_close()
 
+    # ─────────────────────────────────────────────────────────────
+    # PASO 2
+    # ─────────────────────────────────────────────────────────────
     if step >= 2:
         step_open(2)
 
         st.markdown('<div class="subsection-spacer"></div>', unsafe_allow_html=True)
 
-        enfoque_txt = "Bayesiano" if st.session_state.enfoque == "bayesiano" else "Frecuentista"
+        enfoque_txt = (
+            "Bayesiano" if st.session_state.enfoque == "bayesiano" else "Frecuentista"
+        )
         st.markdown(
             f"""
-      <div class="result-card">
-          <div class="choice-title">¡Buena elección!</div>
-          <div class="choice-text">Has seleccionado analizar tu test A/B con el modelo {enfoque_txt}.</div>
-      </div>
-      """,
+            <div class="result-card">
+                <div class="choice-title">¡Buena elección!</div>
+                <div class="choice-text">Has seleccionado analizar tu test A/B con el modelo {enfoque_txt}.</div>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
         st.markdown(
             """
-      <div class="result-card">
-          <div class="choice-title">¿Puedes analizar tu test A/B con “Session ID” de cada sesión que ha formado parte del experimento?</div>
-          <div class="choice-text">
-              Para analizar correctamente un experimento A/B es necesario definir la unidad de análisis.
-              <br><br>
-              En entornos web, el uso del “Session ID” de Google Analytics 4 (GA4) permite identificar exposiciones y conversiones a nivel de sesión,
-              evitando duplicidades y sesgos en el cálculo de resultados. Si dispones de Session ID, deberás añadir al CSV una columna con dichos datos.
-              <br><br>
-              ¿Es posible analizar este experimento utilizando el Session ID de GA4?
-          </div>
-      </div>
-      """,
+            <div class="result-card">
+                <div class="choice-title">¿Puedes analizar tu test A/B con "Session ID" de cada sesión que ha formado parte del experimento?</div>
+                <div class="choice-text">
+                    Para analizar correctamente un experimento A/B es necesario definir la unidad de análisis.
+                    <br><br>
+                    En entornos web, el uso del "Session ID" de Google Analytics 4 (GA4) permite identificar exposiciones y conversiones a nivel de sesión,
+                    evitando duplicidades y sesgos en el cálculo de resultados. Si dispones de Session ID, deberás añadir al CSV una columna con dichos datos.
+                    <br><br>
+                    ¿Es posible analizar este experimento utilizando el Session ID de GA4?
+                </div>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
         if step == 2:
             c1, c2 = st.columns(2, gap="large")
+
             with c1:
-                if st.button("Tengo Session ID", key="btn_sid_yes", type="primary"):
-                    st.session_state.session_id = True
-                    go_to_step(3)
+                with st.container(border=True):
+                    st.markdown(
+                        """
+                        <div class="choice-title">✅ Con Session ID</div>
+                        <div class="choice-text">
+                            Dispondrás de mayor precisión en el análisis al identificar
+                            exposiciones y conversiones a nivel de sesión, evitando duplicidades.
+                            <br><br>
+                            El CSV deberá incluir una columna con los Session ID de GA4.
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(
+                        "Tengo Session ID",
+                        key="btn_sid_yes",
+                        type="primary",
+                    ):
+                        st.session_state.session_id = True
+                        go_to_step(3)
+
             with c2:
-                if st.button("No tengo Session ID", key="btn_sid_no", type="primary"):
-                    st.session_state.session_id = False
-                    go_to_step(3)
+                with st.container(border=True):
+                    st.markdown(
+                        """
+                        <div class="choice-title">❌ Sin Session ID</div>
+                        <div class="choice-text">
+                            El análisis se realizará utilizando eventos y sesiones agregados.
+                            <br><br>
+                            El CSV deberá contener datos de visitas y conversiones
+                            agregados por día para cada variante.
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(
+                        "No tengo Session ID",
+                        key="btn_sid_no",
+                        type="primary",
+                    ):
+                        st.session_state.session_id = False
+                        go_to_step(3)
 
             if st.button("⬅️ Volver", key="back_2"):
                 go_to_step(1)
+
         else:
             sid_txt = "con Session ID" if st.session_state.session_id else "sin Session ID"
             st.markdown(
                 f"""
-          <div class="success-box">
-              ✅ Seleccionado: <b>{sid_txt}</b>
-          </div>
-          """,
+                <div class="success-box">
+                    ✅ Seleccionado: <b>{sid_txt}</b>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
             if st.button("Editar paso 2", key="edit_step_2"):
@@ -503,6 +581,9 @@ def render_wizard():
 
         step_close()
 
+    # ─────────────────────────────────────────────────────────────
+    # PASO 3 — BAYESIANO
+    # ─────────────────────────────────────────────────────────────
     if step >= 3 and st.session_state.get("enfoque") == "bayesiano":
         step_open(3)
 
@@ -520,57 +601,86 @@ def render_wizard():
 
         st.markdown(
             f"""
-      <div class="result-card">
-          <div class="choice-title">¡Perfecto!</div>
-          <div class="choice-text">{perfect_text}</div>
-      </div>
-      """,
+            <div class="result-card">
+                <div class="choice-title">¡Perfecto!</div>
+                <div class="choice-text">{perfect_text}</div>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
         st.markdown(
             """
-      <div class="result-card">
-          <div class="choice-title">¿Los usuarios pueden convertir una sola vez o más de una vez la métrica a analizar?</div>
-          <div class="choice-text">
-              <ul>
-                  <li>
-                      <b>Conversiones únicas</b>: el usuario puede convertir una sola vez y de esta manera se analizará
-                      mediante la distribución previa Beta, ideal para analizar conversiones (siendo 0 la no conversión y 1
-                      si el usuario ha convertido en la sesión).
-                  </li>
-                  <li>
-                      <b>Conversiones múltiples</b>: con esta opción se analizará mediante la distribución previa Gamma-Poisson,
-                      es adecuada para conteos de métricas.
-                  </li>
-              </ul>
-          </div>
-      </div>
-      """,
+            <div class="result-card">
+                <div class="choice-title">¿Los usuarios pueden convertir una sola vez o más de una vez la métrica a analizar?</div>
+                <div class="choice-text">
+                    Selecciona el tipo de conversión que mejor describe tu métrica objetivo.
+                </div>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
         if step == 3:
             c1, c2 = st.columns(2, gap="large")
+
             with c1:
-                if st.button("Analizar con conversiones únicas", key="btn_01", type="primary"):
-                    st.session_state.tipo_valores = "0_1"
-                    go_to_step(4)
+                with st.container(border=True):
+                    st.markdown(
+                        """
+                        <div class="choice-title">Conversiones únicas</div>
+                        <div class="choice-text">
+                            El usuario puede convertir una sola vez. Se analiza mediante
+                            la distribución previa <b>Beta</b>, ideal para conversiones
+                            donde 0 = no convierte y 1 = convierte en la sesión.
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(
+                        "Analizar con conversiones únicas",
+                        key="btn_01",
+                        type="primary",
+                    ):
+                        st.session_state.tipo_valores = "0_1"
+                        go_to_step(4)
+
             with c2:
-                if st.button("Analizar con conversiones múltiples", key="btn_0inf", type="primary"):
-                    st.session_state.tipo_valores = "0_inf"
-                    go_to_step(4)
+                with st.container(border=True):
+                    st.markdown(
+                        """
+                        <div class="choice-title">Conversiones múltiples</div>
+                        <div class="choice-text">
+                            Se analiza mediante la distribución previa <b>Gamma-Poisson</b>,
+                            adecuada para conteos de métricas donde un usuario puede
+                            convertir más de una vez.
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(
+                        "Analizar con conversiones múltiples",
+                        key="btn_0inf",
+                        type="primary",
+                    ):
+                        st.session_state.tipo_valores = "0_inf"
+                        go_to_step(4)
 
             if st.button("⬅️ Volver", key="back_3_bayes"):
                 go_to_step(2)
+
         else:
-            tipo_txt = "Conversiones únicas" if st.session_state.tipo_valores == "0_1" else "Conversiones múltiples"
+            tipo_txt = (
+                "Conversiones únicas"
+                if st.session_state.tipo_valores == "0_1"
+                else "Conversiones múltiples"
+            )
             st.markdown(
                 f"""
-          <div class="success-box">
-              ✅ Seleccionado: <b>{tipo_txt}</b>
-          </div>
-          """,
+                <div class="success-box">
+                    ✅ Seleccionado: <b>{tipo_txt}</b>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
             if st.button("Editar paso 3", key="edit_step_3_bayes"):
@@ -585,6 +695,9 @@ def render_wizard():
 
         step_close()
 
+    # ─────────────────────────────────────────────────────────────
+    # PASO 3 — FRECUENTISTA
+    # ─────────────────────────────────────────────────────────────
     if step >= 3 and st.session_state.get("enfoque") == "frecuentista":
         step_open(3)
 
@@ -602,53 +715,92 @@ def render_wizard():
 
         st.markdown(
             f"""
-      <div class="result-card">
-          <div class="choice-title">¡Perfecto!</div>
-          <div class="choice-text">{perfect_text}</div>
-      </div>
-      """,
+            <div class="result-card">
+                <div class="choice-title">¡Perfecto!</div>
+                <div class="choice-text">{perfect_text}</div>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
         st.markdown(
             """
-      <div class="result-card">
-          <div class="choice-title">¿Qué tipo de intervalo quieres utilizar para interpretar el uplift relativo?</div>
-          <div class="choice-text">
-              <ul>
-                  <li>
-                      <b>IC centrado</b>: muestra el intervalo centrado del uplift relativo.
-                  </li>
-                  <li>
-                      <b>Cola derecha</b>: utiliza el IC 95% izquierda.
-                  </li>
-                  <li>
-                      <b>Cola izquierda</b>: utiliza el IC 95% derecha.
-                  </li>
-              </ul>
-          </div>
-      </div>
-      """,
+            <div class="result-card">
+                <div class="choice-title">¿Qué tipo de intervalo quieres utilizar para interpretar el uplift relativo?</div>
+                <div class="choice-text">
+                    Selecciona el tipo de intervalo de confianza que mejor se adapta a tu hipótesis de test.
+                </div>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
         if step == 3:
             c1, c2, c3 = st.columns(3, gap="large")
+
             with c1:
-                if st.button("IC centrado", key="btn_freq_centrado", type="primary"):
-                    st.session_state.freq_interval_type = "centrado"
-                    go_to_step(4)
+                with st.container(border=True):
+                    st.markdown(
+                        """
+                        <div class="choice-title">IC Centrado</div>
+                        <div class="choice-text">
+                            Muestra el intervalo de confianza centrado del uplift relativo.
+                            Opción estándar y más habitual para tests bidireccionales.
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(
+                        "IC centrado",
+                        key="btn_freq_centrado",
+                        type="primary",
+                    ):
+                        st.session_state.freq_interval_type = "centrado"
+                        go_to_step(4)
+
             with c2:
-                if st.button("Cola derecha", key="btn_freq_derecha", type="primary"):
-                    st.session_state.freq_interval_type = "derecha"
-                    go_to_step(4)
+                with st.container(border=True):
+                    st.markdown(
+                        """
+                        <div class="choice-title">Cola derecha</div>
+                        <div class="choice-text">
+                            Utiliza el IC 95% izquierda. Indica el mínimo uplift
+                            que podemos esperar con un 95% de confianza.
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(
+                        "Cola derecha",
+                        key="btn_freq_derecha",
+                        type="primary",
+                    ):
+                        st.session_state.freq_interval_type = "derecha"
+                        go_to_step(4)
+
             with c3:
-                if st.button("Cola izquierda", key="btn_freq_izquierda", type="primary"):
-                    st.session_state.freq_interval_type = "izquierda"
-                    go_to_step(4)
+                with st.container(border=True):
+                    st.markdown(
+                        """
+                        <div class="choice-title">Cola izquierda</div>
+                        <div class="choice-text">
+                            Utiliza el IC 95% derecha. Indica el máximo riesgo
+                            de pérdida con un 95% de confianza.
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(
+                        "Cola izquierda",
+                        key="btn_freq_izquierda",
+                        type="primary",
+                    ):
+                        st.session_state.freq_interval_type = "izquierda"
+                        go_to_step(4)
 
             if st.button("⬅️ Volver", key="back_3_freq"):
                 go_to_step(2)
+
         else:
             interval_txt = {
                 "centrado": "IC centrado",
@@ -658,10 +810,10 @@ def render_wizard():
 
             st.markdown(
                 f"""
-          <div class="success-box">
-              ✅ Seleccionado: <b>{interval_txt}</b>
-          </div>
-          """,
+                <div class="success-box">
+                    ✅ Seleccionado: <b>{interval_txt}</b>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
             if st.button("Editar paso 3", key="edit_step_3_freq"):
@@ -676,6 +828,9 @@ def render_wizard():
 
         step_close()
 
+    # ─────────────────────────────────────────────────────────────
+    # PASO 4
+    # ─────────────────────────────────────────────────────────────
     if step >= 4:
         step_open(4)
         st.markdown('<div class="subsection-spacer"></div>', unsafe_allow_html=True)
@@ -707,38 +862,46 @@ def render_wizard():
 
             st.markdown(
                 f"""
-          <div class="result-card">
-              <div class="choice-title">¡Listo!</div>
-              <div class="choice-text">
-                  Ruta disponible ✅<br>
-                  Motor seleccionado: <b>{get_engine_label(engine_key)}</b><br><br>
-                  {extra}
-              </div>
-          </div>
-          """,
+                <div class="result-card">
+                    <div class="choice-title">¡Listo!</div>
+                    <div class="choice-text">
+                        Ruta disponible ✅<br>
+                        Motor seleccionado: <b>{get_engine_label(engine_key)}</b><br><br>
+                        {extra}
+                    </div>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
 
-            c1, c2, c3 = st.columns([1, 2, 1])
-            with c2:
-                if st.button("Analizar test A/B", key="btn_go_app", type="primary"):
+            col1, _ = st.columns([1, 5])
+            with col1:
+                if st.button(
+                    "Analizar test A/B",
+                    key="btn_go_app",
+                    type="primary",
+                ):
                     set_engine_from_selected_model()
                     st.session_state.show_app = True
                     st.rerun()
         else:
             st.markdown(
                 """
-          <div class="warning-box">
-              <b>Todavía no disponible</b><br><br>
-              Selecciona un enfoque y completa los pasos.
-          </div>
-          """,
+                <div class="warning-box">
+                    <b>Todavía no disponible</b><br><br>
+                    Selecciona un enfoque y completa los pasos.
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
 
             c1, c2, c3 = st.columns([1, 2, 1])
             with c2:
-                if st.button("Volver al inicio", key="btn_back_home", type="primary"):
+                if st.button(
+                    "Volver al inicio",
+                    key="btn_back_home",
+                    type="primary",
+                ):
                     reset_wizard()
                     st.rerun()
 
@@ -966,11 +1129,11 @@ def render_calculadora_actual():
     )
     st.markdown(
         """
-  <div class="info-box">
-  Esta herramienta ejecuta los motores (bayesianos y frecuentistas) programados por Pablo y muestra sus resultados de forma visual.
-  Sube un archivo CSV con tus datos.
-  </div>
-  """,
+        <div class="info-box">
+        Esta herramienta ejecuta los motores (bayesianos y frecuentistas) programados por Pablo y muestra sus resultados de forma visual.
+        Sube un archivo CSV con tus datos.
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
@@ -1168,18 +1331,21 @@ def render_calculadora_actual():
     st.markdown("---")
     st.markdown(
         """
-  <div style="text-align: center; background-color: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 20px;">
-    <p style="margin: 0; color: #555;">
-      Idea y concepto: <strong>Claudia de la Cruz</strong>, <strong>Alex García</strong>
-      &nbsp;|&nbsp; Desarrollo estadístico: <strong>Pablo González</strong>
-      &nbsp;|&nbsp; Arquitectura de aplicación y UX: <strong>Eduardo Hernández</strong>
-    </p>
-  </div>
-  """,
+        <div style="text-align: center; background-color: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 20px;">
+        <p style="margin: 0; color: #555;">
+          Idea y concepto: <strong>Claudia de la Cruz</strong>, <strong>Alex García</strong>
+          &nbsp;|&nbsp; Desarrollo estadístico: <strong>Pablo González</strong>
+          &nbsp;|&nbsp; Arquitectura de aplicación y UX: <strong>Eduardo Hernández</strong>
+        </p>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
 
+# ─────────────────────────────────────────────────────────────
+# ENTRY POINT
+# ─────────────────────────────────────────────────────────────
 init_wizard_state()
 
 if st.session_state.get("show_app", False):
