@@ -1127,15 +1127,6 @@ def render_calculadora_actual():
         '<h2 class="main-header">Calculadora para Tests A/B</h2>',
         unsafe_allow_html=True,
     )
-    st.markdown(
-        """
-        <div class="info-box">
-        Esta herramienta ejecuta los motores (bayesianos y frecuentistas) programados por Pablo y muestra sus resultados de forma visual.
-        Sube un archivo CSV con tus datos.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
 
@@ -1328,21 +1319,8 @@ def render_calculadora_actual():
             )
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
-    st.markdown("---")
-    st.markdown(
-        """
-        <div style="text-align: center; background-color: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 20px;">
-        <p style="margin: 0; color: #555;">
-          Idea y concepto: <strong>Claudia de la Cruz</strong>, <strong>Alex García</strong>
-          &nbsp;|&nbsp; Desarrollo estadístico: <strong>Pablo González</strong>
-          &nbsp;|&nbsp; Arquitectura de aplicación y UX: <strong>Eduardo Hernández</strong>
-        </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
+    
+    
 # ─────────────────────────────────────────────────────────────
 # ENTRY POINT
 # ─────────────────────────────────────────────────────────────
