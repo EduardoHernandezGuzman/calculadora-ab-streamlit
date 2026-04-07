@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import streamlit as st
 from matplotlib.backends.backend_pdf import PdfPages
 
 try:
@@ -32,11 +33,15 @@ sns.set(style="whitegrid")
 def _safe_openai_client() -> Optional["OpenAI"]:
     if OpenAI is None:
         return None
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    try:
+        api_key = st.secrets["OPENAI_API_KEY"]
+    except:
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    
     if not api_key:
         return None
     try:
-        return OpenAI()
+        return OpenAI(api_key=api_key)
     except Exception:
         return None
 

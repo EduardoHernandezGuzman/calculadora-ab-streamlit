@@ -12,6 +12,7 @@ Entradas esperadas (mínimo):
 
 from __future__ import annotations
 
+import os
 import warnings
 from collections import defaultdict
 from io import BytesIO
@@ -22,6 +23,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import streamlit as st
 from matplotlib.backends.backend_pdf import PdfPages
 
 warnings.filterwarnings("ignore", "Glyph .* missing from font")
@@ -30,8 +32,16 @@ sns.set(style="whitegrid")
 
 def _interpretar_con_ia(resultados_ultimo_dia: Dict[str, Any]) -> str:
     try:
+        api_key = st.secrets["OPENAI_API_KEY"]
+    except:
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    
+    if not api_key:
+        return "Interpretación IA no configurada (falta OPENAI_API_KEY en secrets o entorno)."
+    
+    try:
         from openai import OpenAI  # type: ignore
-        client = OpenAI()
+        client = OpenAI(api_key=api_key)
     except Exception as e:
         return f"[IA] No disponible (no se pudo importar OpenAI): {e}"
 

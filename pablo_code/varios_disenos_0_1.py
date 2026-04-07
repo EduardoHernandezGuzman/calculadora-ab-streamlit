@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import streamlit as st
 from matplotlib.backends.backend_pdf import PdfPages
 
 try:
@@ -32,9 +33,13 @@ sns.set(style="whitegrid")
 
 
 def interpretar_con_ia(resultados: Dict[str, Any]) -> str:
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    try:
+        api_key = st.secrets["OPENAI_API_KEY"]
+    except:
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    
     if not api_key:
-        return "Interpretación IA no configurada (falta OPENAI_API_KEY)."
+        return "Interpretación IA no configurada (falta OPENAI_API_KEY en secrets o entorno)."
 
     try:
         from openai import OpenAI

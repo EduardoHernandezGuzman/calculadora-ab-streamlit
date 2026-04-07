@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import streamlit as st
 from matplotlib.backends.backend_pdf import PdfPages
 
 # pymc estaba importado en el original, pero aquí no se usa en el cálculo.
@@ -41,11 +42,15 @@ sns.set(style="whitegrid")
 def interpretar_con_ia(resultados: Dict[str, Any]) -> str:
     """
     Interpretación ejecutiva con OpenAI.
-    Si no hay OPENAI_API_KEY en el entorno, devuelve mensaje informativo.
+    Si no hay OPENAI_API_KEY en el entorno o secrets, devuelve mensaje informativo.
     """
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    try:
+        api_key = st.secrets["OPENAI_API_KEY"]
+    except:
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    
     if not api_key:
-        return "Interpretación IA no configurada (falta OPENAI_API_KEY)."
+        return "Interpretación IA no configurada (falta OPENAI_API_KEY en secrets o entorno)."
 
     try:
         from openai import OpenAI

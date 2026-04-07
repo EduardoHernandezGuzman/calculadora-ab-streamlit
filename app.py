@@ -1298,7 +1298,10 @@ def render_calculadora_actual():
                     st.code(b)
 
         if getattr(out, "log_text", None):
-            st.subheader("Interpretación / Log")
+            if st.session_state.get("include_ai", False):
+                st.subheader("Interpretación IA")
+            else:
+                st.subheader("Interpretación / Log")
             st.code(out.log_text)
 
         if getattr(out, "figures", None):
