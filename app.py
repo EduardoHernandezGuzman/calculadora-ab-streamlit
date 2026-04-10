@@ -1133,6 +1133,66 @@ def render_calculadora_actual():
     engine_key = st.session_state.get("selected_engine_key")
 
     with st.sidebar:
+        enfoque = st.session_state.get("enfoque")
+        session_id = st.session_state.get("session_id")
+
+        if enfoque == "bayesiano":
+            st.markdown('<p class="sub-header">Calculadora Bayesiana</p>', unsafe_allow_html=True)
+            st.markdown(
+                """
+                **Modelo Bayesiano**
+
+                El enfoque bayesiano interpreta los resultados en términos de probabilidad directa.
+
+                En lugar de preguntarse "¿es este resultado estadísticamente significativo?", responde preguntas como: "¿cuál es la probabilidad de que la variante B sea mejor que la A?"
+
+                - No necesitas un tamaño de muestra fijo.
+                - Análisis de resultados basado en probabilidad.
+                - Decisión más rápida: puedes parar el test cuando desees.
+                """
+            )
+        elif enfoque == "frecuentista":
+            st.markdown('<p class="sub-header">Calculadora Frecuentista</p>', unsafe_allow_html=True)
+            st.markdown(
+                """
+                **Modelo Frecuentista**
+
+                El enfoque frecuentista se centra en comprobar si la diferencia observada podría deberse al azar, respondiendo preguntas como: "¿la diferencia entre A y B es estadísticamente significativa?" o "¿podemos rechazar la hipótesis nula?".
+
+                - Debes calcular previamente la muestra y esperar hasta alcanzarla.
+                - Análisis de resultados basado en p-value.
+                """
+            )
+        else:
+            st.markdown('<p class="sub-header">Calculadora A/B</p>', unsafe_allow_html=True)
+            st.info("No hay un modelo seleccionado. Vuelve al wizard.")
+
+        st.markdown('<p class="sub-header">Configuración del test</p>', unsafe_allow_html=True)
+
+        if enfoque == "bayesiano":
+            tipo_valores = st.session_state.get("tipo_valores")
+            if tipo_valores == "0_1":
+                st.caption("Tipo de conversiones: Conversión única (Beta-Binomial)")
+            elif tipo_valores == "0_inf":
+                st.caption("Tipo de conversiones: Conversiones múltiples (Gamma-Poisson)")
+            st.caption("Nivel de confianza: 95% (Default)")
+
+        elif enfoque == "frecuentista":
+            interval_type = st.session_state.get("freq_interval_type")
+            if interval_type == "centrado":
+                st.caption("Tipo de hipótesis: Two-Tailed")
+            elif interval_type == "derecha":
+                st.caption("Tipo de hipótesis: One-Tailed")
+                st.caption("Dirección de hipótesis: Mejora (cola derecha)")
+            elif interval_type == "izquierda":
+                st.caption("Tipo de hipótesis: One-Tailed")
+                st.caption("Dirección de hipótesis: Empeora (cola izquierda)")
+            st.caption("Nivel de confianza: 95% (Default)")
+
+        if session_id in (True, False):
+            unidad_analisis = "Con Session ID" if session_id else "Sin Session ID"
+            st.caption(f"Unidad de análisis: {unidad_analisis}")
+
         st.markdown('<p class="sub-header">Motor seleccionado</p>', unsafe_allow_html=True)
         st.info(f"**{get_engine_label(engine_key)}**")
 
