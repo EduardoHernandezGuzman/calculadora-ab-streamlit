@@ -560,7 +560,7 @@ def _render_sidebar_dropdowns(engine_key: Optional[str]):
         )
         include_ai = st.checkbox(
             "Interpretación IA (OpenAI)",
-            value=bool(st.session_state.get("include_ai", False)),
+            value=bool(st.session_state.get("include_ai", True)),
             help="Solo si tienes OPENAI_API_KEY configurada en el entorno.",
         )
         st.session_state.generate_pdf = bool(generate_pdf)
@@ -575,7 +575,7 @@ def _render_sidebar_dropdowns(engine_key: Optional[str]):
         )
         include_ai = st.checkbox(
             "Interpretación IA (OpenAI)",
-            value=bool(st.session_state.get("include_ai", False)),
+            value=bool(st.session_state.get("include_ai", True)),
             help="Solo si tienes OPENAI_API_KEY configurada en el entorno.",
         )
         st.session_state.generate_pdf = bool(generate_pdf)
