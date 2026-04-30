@@ -64,10 +64,23 @@ st.set_page_config(
 
 # -----------------------------------------------------------------------------
 # Ensure OPENAI_API_KEY is available for downstream modules
+# - Supports different key casings
+# - Bridges st.secrets -> os.environ for libraries using getenv
 # -----------------------------------------------------------------------------
 try:
-    if "OPENAI_API_KEY" in st.secrets:
-        os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+    key = None
+    # Common variants
+    for k in ("OPENAI_API_KEY", "openai_api_key", "OPENAI-API-KEY"):
+        if k in st.secrets and st.secrets[k]:
+            key = st.secrets[k]
+            break
+
+    # Fallback using .get (safer in some Streamlit contexts)
+    if not key:
+        key = st.secrets.get("OPENAI_API_KEY")
+
+    if key:
+        os.environ["OPENAI_API_KEY"] = key
 except Exception:
     # If secrets are not available, rely on existing environment variables
     pass
