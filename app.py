@@ -12,6 +12,7 @@ import seaborn as sns
 import numpy as np
 import io
 from contextlib import redirect_stdout
+import os
 
 # -----------------------------------------------------------------------------
 # Constantes
@@ -60,6 +61,16 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# -----------------------------------------------------------------------------
+# Ensure OPENAI_API_KEY is available for downstream modules
+# -----------------------------------------------------------------------------
+try:
+    if "OPENAI_API_KEY" in st.secrets:
+        os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+except Exception:
+    # If secrets are not available, rely on existing environment variables
+    pass
 
 # -----------------------------------------------------------------------------
 # CSS
