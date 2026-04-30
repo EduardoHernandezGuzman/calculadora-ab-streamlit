@@ -1,18 +1,96 @@
 from __future__ import annotations
 
 import io
+import os
 import warnings
 from collections import defaultdict
 from itertools import combinations
+from typing import Any, Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import streamlit as st
 from matplotlib.backends.backend_pdf import PdfPages
 
 warnings.filterwarnings("ignore", "Glyph .* missing from font")
 sns.set(style="whitegrid")
+
+
+def interpretar_con_ia(resultados: Dict[str, Any]) -> str:
+    try:
+        api_key = st.secrets["OPENAI_API_KEY"]
+    except Exception:
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+
+    if not api_key:
+        return "Interpretación IA no configurada (falta OPENAI_API_KEY en secrets o entorno)."
+
+    try:
+        from openai import OpenAI
+    except Exception:
+        return "Interpretación IA no disponible (paquete openai no instalado)."
+
+    client = OpenAI(api_key=api_key)
+
+    resumen_grupos = []
+    comparativas = []
+
+    for k, v in resultados.items():
+        if isinstance(v, dict) and "media" in v:
+            visitas_acum = resultados.get(f"acum_visitas_{k}", "N/A")
+            conv_acum = resultados.get(f"acum_clicks_{k}", "N/A")
+            resumen_grupos.append(
+                f"Grupo {k}:\n"
+                f"Visitas Acumuladas = {visitas_acum}\n"
+                f"Conversiones/Evento Acumulado = {conv_acum}\n"
+                f"Tasa Media = {v['media']:.4f}\n"
+                f"IC95% (Tasa) = [{v['ci'][0]:.4f}, {v['ci'][1]:.4f}]"
+            )
+
+        if "_vs_" in str(k) and isinstance(v, dict):
+            comparativas.append(
+                f"COMPARATIVA {k}:\n"
+                f"Probabilidad de que el primero sea mejor: {v['prob_mejor']*100:.2f}%\n"
+                f"Uplift Medio Estimado: {v['uplift_media']*100:.2f}%\n"
+                f"IC Centrado 95%: [{v['ci_centered'][0]*100:.2f}%, {v['ci_centered'][1]*100:.2f}%]\n"
+                f"IC Unilateral (Suelo): > {v['ci_right'][0]*100:.2f}%\n"
+                f"IC Unilateral (Techo): < {v['ci_left'][1]*100:.2f}%"
+            )
+
+    prompt = f"""
+Eres un experto Senior en Estadística Bayesiana y Experimentación (A/B Testing). Tu trabajo es interpretar los resultados de un experimento y dar una recomendación clara de negocio, basándote en un modelo Gamma-Poisson (métricas continuas o de conteo no acotadas superiores).
+
+Contempla ambos escenarios: objetivo de MAXIMIZAR y de MINIMIZAR la métrica (explica ambas interpretaciones si aplica).
+
+Regla del cero: si el intervalo de uplift incluye 0%, no existe diferencia concluyente entre variantes.
+
+Gestión de riesgo: traduce los intervalos (suelo/techo) a impacto real en negocio (peor y mejor escenario plausible).
+
+Probabilidad: utiliza la probabilidad de superioridad como indicador de confianza, pero no como único criterio de decisión.
+
+Recomendación final: indica claramente si se debe detener el test (y elegir variante) o continuar recolectando datos.
+
+Lenguaje claro, ejecutivo y sin fórmulas matemáticas.
+
+{chr(10).join(resumen_grupos)}
+
+{chr(10).join(comparativas)}
+""".strip()
+
+    try:
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Eres un analista senior de CRO."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+        )
+        return resp.choices[0].message.content
+    except Exception as e:
+        return f"No se pudo generar interpretación IA: {e}"
 
 
 class ConversionBayesGamma:
@@ -101,9 +179,12 @@ class ConversionBayesGamma:
         self.historial.append(resultados)
 
 
-def run(df: pd.DataFrame, config: dict):
-    num_samples = config.get("num_samples", 20000)
-    generate_pdf = config.get("generate_pdf", False)
+def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None):
+    config = config or {}
+
+    num_samples = int(config.get("num_samples", 20000))
+    generate_pdf = bool(config.get("generate_pdf", False))
+    include_ai = bool(config.get("include_ai", False))
 
     priors = {"A": (1, 1), "B": (1, 1)}
     modelo = ConversionBayesGamma(priors=priors)
@@ -182,6 +263,9 @@ def run(df: pd.DataFrame, config: dict):
                 pdf.savefig(fig)
         buffer.seek(0)
         pdf_bytes = buffer.read()
+
+    if include_ai and modelo.historial:
+        log_text = interpretar_con_ia(modelo.historial[-1])
 
     return {
         "summary": summary_df,

@@ -5,9 +5,6 @@ Motor Bayesiano [0,1] CON Session ID (datos por sesión, agregación por día).
 Entradas esperadas (mínimo):
 - Columna "Día"
 - Columnas "Conversiones A", "Conversiones B", ... (valores 0/1 o NaN)
-  - NaN = sesión sin exposición / sin dato para ese grupo
-  - count() cuenta "visitas" (sesiones con dato)
-  - sum() cuenta "conversiones" (sesiones con valor 1)
 """
 
 from __future__ import annotations
@@ -33,14 +30,14 @@ sns.set(style="whitegrid")
 def _interpretar_con_ia(resultados_ultimo_dia: Dict[str, Any]) -> str:
     try:
         api_key = st.secrets["OPENAI_API_KEY"]
-    except:
+    except Exception:
         api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    
+
     if not api_key:
         return "Interpretación IA no configurada (falta OPENAI_API_KEY en secrets o entorno)."
-    
+
     try:
-        from openai import OpenAI  # type: ignore
+        from openai import OpenAI
         client = OpenAI(api_key=api_key)
     except Exception as e:
         return f"[IA] No disponible (no se pudo importar OpenAI): {e}"
@@ -53,21 +50,20 @@ def _interpretar_con_ia(resultados_ultimo_dia: Dict[str, Any]) -> str:
             visitas_acum = resultados_ultimo_dia.get(f"acum_visitas_{k}", "N/A")
             conv_acum = resultados_ultimo_dia.get(f"acum_clicks_{k}", "N/A")
             resumen_grupos.append(
-                f"Grupo {k}: Visitas Acumuladas={visitas_acum}, Conversiones Acumuladas={conv_acum}, "
-                f"Tasa Media={v['media']:.4f}, IC95%=[{v['ci'][0]:.4f}, {v['ci'][1]:.4f}]"
+                f"Grupo {k}: Visitas Acumuladas={visitas_acum}, "
+                f"Conversiones Acumuladas={conv_acum}, "
+                f"Tasa Media={v['media']:.4f}, "
+                f"IC95%=[{v['ci'][0]:.4f}, {v['ci'][1]:.4f}]"
             )
 
-        if "_vs_" in k and isinstance(v, dict):
-            ic_centrado = f"[{v['ci_centered'][0]*100:.2f}%, {v['ci_centered'][1]*100:.2f}%]"
-            ic_suelo = f"> {v['ci_right'][0]*100:.2f}%"
-            ic_techo = f"< {v['ci_left'][1]*100:.2f}%"
+        if "_vs_" in str(k) and isinstance(v, dict):
             comparativas.append(
                 f"COMPARATIVA {k}:\n"
                 f"- Probabilidad de que el primero sea mejor: {v['prob_mejor']*100:.2f}%\n"
                 f"- Uplift Medio Estimado: {v['uplift_media']*100:.2f}%\n"
-                f"- IC CENTRADO 95%: {ic_centrado}\n"
-                f"- IC SUELO: {ic_suelo}\n"
-                f"- IC TECHO: {ic_techo}"
+                f"- IC CENTRADO 95%: [{v['ci_centered'][0]*100:.2f}%, {v['ci_centered'][1]*100:.2f}%]\n"
+                f"- IC SUELO: > {v['ci_right'][0]*100:.2f}%\n"
+                f"- IC TECHO: < {v['ci_left'][1]*100:.2f}%"
             )
 
     prompt = f"""
@@ -86,7 +82,7 @@ COMPARATIVAS:
 {chr(10).join(comparativas)}
 
 Lenguaje claro, ejecutivo y sin fórmulas.
-"""
+""".strip()
 
     try:
         resp = client.chat.completions.create(
@@ -137,7 +133,12 @@ class ConversionBayesBeta:
             alpha_post = alpha0 + total_clicks
             beta_post = beta0 + total_fracasos
 
-            muestras_array = np.random.beta(a=alpha_post, b=beta_post, size=int(num_samples)).astype(np.float64)
+            muestras_array = np.random.beta(
+                a=alpha_post,
+                b=beta_post,
+                size=int(num_samples),
+            ).astype(np.float64)
+
             muestras[grupo] = muestras_array
 
             mean = float(np.mean(muestras_array))
@@ -159,7 +160,11 @@ class ConversionBayesBeta:
                 tasa_a = muestras[a]
                 tasa_b = muestras[b]
 
-                uplift_samples = np.where(tasa_b != 0, (tasa_a - tasa_b) / tasa_b, 0.0)
+                uplift_samples = np.where(
+                    tasa_b != 0,
+                    (tasa_a - tasa_b) / tasa_b,
+                    0.0,
+                )
                 diff_samples = tasa_a - tasa_b
 
                 prob_mejor = float(np.mean(diff_samples > 0))
@@ -195,7 +200,13 @@ def _fig_histograma_raw(dia: str, raw_data: pd.DataFrame) -> Optional[plt.Figure
         s = raw_data["Conversiones A"].dropna()
         if len(s) > 0:
             sns.histplot(
-                s, label="Grupo A", kde=False, element="step", alpha=0.4, discrete=True, ax=ax
+                s,
+                label="Grupo A",
+                kde=False,
+                element="step",
+                alpha=0.4,
+                discrete=True,
+                ax=ax,
             )
             plotted = True
 
@@ -203,7 +214,13 @@ def _fig_histograma_raw(dia: str, raw_data: pd.DataFrame) -> Optional[plt.Figure
         s = raw_data["Conversiones B"].dropna()
         if len(s) > 0:
             sns.histplot(
-                s, label="Grupo B", kde=False, element="step", alpha=0.4, discrete=True, ax=ax
+                s,
+                label="Grupo B",
+                kde=False,
+                element="step",
+                alpha=0.4,
+                discrete=True,
+                ax=ax,
             )
             plotted = True
 
@@ -241,7 +258,10 @@ def _fig_diff(dia: str, stats: Dict[str, Any], g1: str, g2: str) -> plt.Figure:
     return fig
 
 
-def _build_beta_priors(expected_priors: Optional[Dict[str, Tuple[float, float]]], grupos: List[str]) -> Dict[str, Tuple[float, float]]:
+def _build_beta_priors(
+    expected_priors: Optional[Dict[str, Tuple[float, float]]],
+    grupos: List[str],
+) -> Dict[str, Tuple[float, float]]:
     if not expected_priors:
         return {g: (1.0, 1.0) for g in grupos}
 
@@ -263,7 +283,10 @@ def _infer_grupos_from_columns(df: pd.DataFrame) -> List[str]:
     return sorted(list(dict.fromkeys(grupos)))
 
 
-def _aggregate_by_day_sessionid(df: pd.DataFrame, grupos: List[str]) -> List[Tuple[Any, pd.DataFrame, Dict[str, Tuple[int, int]]]]:
+def _aggregate_by_day_sessionid(
+    df: pd.DataFrame,
+    grupos: List[str],
+) -> List[Tuple[Any, pd.DataFrame, Dict[str, Tuple[int, int]]]]:
     if "Día" not in df.columns:
         raise ValueError("Falta la columna 'Día' en el CSV.")
 
@@ -296,7 +319,9 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
 
     grupos = _infer_grupos_from_columns(df)
     if not grupos:
-        raise ValueError("No se detectaron columnas 'Conversiones X'. Ej: 'Conversiones A', 'Conversiones B'.")
+        raise ValueError(
+            "No se detectaron columnas 'Conversiones X'. Ej: 'Conversiones A', 'Conversiones B'."
+        )
 
     priors = _build_beta_priors(expected_priors, grupos)
     modelo = ConversionBayesBeta(priors=priors)
@@ -308,6 +333,7 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
 
     for dia_val, df_dia_raw, datos_agregados in agregados:
         dia_label = f"Día {int(dia_val)}" if str(dia_val).isdigit() else f"Día {dia_val}"
+
         modelo.actualizar_con_datos(
             datos=datos_agregados,
             raw_data=df_dia_raw,
@@ -316,7 +342,9 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
         )
 
         paso = modelo.historial[-1]
-        grupos_stats = [g for g in paso if isinstance(paso.get(g), dict) and "media" in paso[g]]
+        grupos_stats = [
+            g for g in paso if isinstance(paso.get(g), dict) and "media" in paso[g]
+        ]
 
         for g in grupos_stats:
             total_visitas = int(paso.get(f"acum_visitas_{g}", 0))
@@ -325,18 +353,20 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
             visitas_dia, conv_dia = datos_agregados[g]
             tasa_obs = (conv_dia / visitas_dia) if visitas_dia > 0 else 0.0
 
-            summary_rows.append({
-                "dia": dia_label,
-                "grupo": g,
-                "media": float(paso[g]["media"]),
-                "ci_low": float(paso[g]["ci"][0]),
-                "ci_high": float(paso[g]["ci"][1]),
-                "visitas": int(visitas_dia),
-                "conversiones": int(conv_dia),
-                "tasa_observada": float(tasa_obs),
-                "acum_visitas": total_visitas,
-                "acum_conversiones": total_conv,
-            })
+            summary_rows.append(
+                {
+                    "dia": dia_label,
+                    "grupo": g,
+                    "media": float(paso[g]["media"]),
+                    "ci_low": float(paso[g]["ci"][0]),
+                    "ci_high": float(paso[g]["ci"][1]),
+                    "visitas": int(visitas_dia),
+                    "conversiones": int(conv_dia),
+                    "tasa_observada": float(tasa_obs),
+                    "acum_visitas": total_visitas,
+                    "acum_conversiones": total_conv,
+                }
+            )
 
         f0 = _fig_histograma_raw(dia_label, df_dia_raw)
         if f0 is not None:

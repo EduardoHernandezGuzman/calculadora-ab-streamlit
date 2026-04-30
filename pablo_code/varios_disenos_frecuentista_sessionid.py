@@ -33,13 +33,15 @@ sns.set(style="whitegrid")
 def _safe_openai_client() -> Optional["OpenAI"]:
     if OpenAI is None:
         return None
+
     try:
         api_key = st.secrets["OPENAI_API_KEY"]
-    except:
+    except Exception:
         api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    
+
     if not api_key:
         return None
+
     try:
         return OpenAI(api_key=api_key)
     except Exception:
@@ -60,30 +62,29 @@ def interpretar_resultados_con_ia(resultados: Dict[str, Any]) -> str:
     cola_derecha_izq = resultados["ci_relativo_derecha_izq"]
     cola_izquierda_der = resultados["ci_relativo_izquierda_der"]
 
-    resumen_datos = (
-        f"TEST A/B: Control ({g1}) vs Variante ({g2})\n"
-        f"MUESTRAS: {g1}: {resultados['n_g1']} filas | {g2}: {resultados['n_g2']} filas\n"
-        f"CONVERSIONES: {g1}: {resultados['conv_g1']} | {g2}: {resultados['conv_g2']}\n"
-        f"----------------------------------------------------\n"
-        f"1. TASA DE CONVERSIÓN MEDIA:\n"
-        f"   - {g1} (A): {m1:.4f}\n"
-        f"   - {g2} (B): {m2:.4f}\n\n"
-        f"2. UPLIFT (MEJORA) ESTIMADO:\n"
-        f"   - La variante B mejora un {uplift_pct:.2f}% respecto al control A.\n\n"
-        f"3. NIVEL DE SIGNIFICANCIA DE QUE B > A:\n"
-        f"   - {precision_b_gana:.2f}%\n\n"
-        f"4. INTERVALOS DEL UPLIFT RELATIVO:\n"
-        f"   - IC centrado: [{ci_rel_low:.2f}%, {ci_rel_high:.2f}%]\n"
-        f"   - Cola derecha (IC 95% izquierda): > {cola_derecha_izq:.2f}%\n"
-        f"   - Cola izquierda (IC 95% derecha): < {cola_izquierda_der:.2f}%"
-    )
-
     prompt = f"""
 Eres un Director de CRO. Analiza estos resultados de un test A/B.
 IMPORTANTE: No uses la palabra "probabilidad", usa siempre "NIVEL DE SIGNIFICANCIA".
 
 DATOS DEL TEST:
-{resumen_datos}
+TEST A/B: Control ({g1}) vs Variante ({g2})
+MUESTRAS: {g1}: {resultados['n_g1']} filas | {g2}: {resultados['n_g2']} filas
+CONVERSIONES: {g1}: {resultados['conv_g1']} | {g2}: {resultados['conv_g2']}
+----------------------------------------------------
+1. TASA DE CONVERSIÓN MEDIA:
+- {g1} (A): {m1:.4f}
+- {g2} (B): {m2:.4f}
+
+2. UPLIFT (MEJORA) ESTIMADO:
+- La variante B mejora un {uplift_pct:.2f}% respecto al control A.
+
+3. NIVEL DE SIGNIFICANCIA DE QUE B > A:
+- {precision_b_gana:.2f}%
+
+4. INTERVALOS DEL UPLIFT RELATIVO:
+- IC centrado: [{ci_rel_low:.2f}%, {ci_rel_high:.2f}%]
+- Cola derecha (IC 95% izquierda): > {cola_derecha_izq:.2f}%
+- Cola izquierda (IC 95% derecha): < {cola_izquierda_der:.2f}%
 
 TU MISIÓN:
 Interpreta si B es mejor que A para un directivo.
@@ -102,7 +103,10 @@ ESTRUCTURA:
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "Eres un experto en A/B testing que habla de nivel de significancia."},
+                {
+                    "role": "system",
+                    "content": "Eres un experto en A/B testing que habla siempre de nivel de significancia.",
+                },
                 {"role": "user", "content": prompt},
             ],
             temperature=0.1,

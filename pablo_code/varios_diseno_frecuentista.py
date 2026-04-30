@@ -3,7 +3,7 @@
 Varios_diseno_frecuentista.py
 
 Adaptación desde Colab a módulo reutilizable (Streamlit).
-- Mantiene la lógica: Bootstrap sobre datos agregados + IC + gráfico + (opcional) IA Fisher.
+- Mantiene la lógica: Bootstrap sobre datos agregados + IC + gráfico + IA opcional.
 - Elimina dependencias de Google Drive / rutas fijas.
 """
 
@@ -26,66 +26,108 @@ except Exception:
     OpenAI = None  # type: ignore
 
 import warnings
-warnings.filterwarnings("ignore", "Glyph .* missing from font")
 
+warnings.filterwarnings("ignore", "Glyph .* missing from font")
 sns.set(style="whitegrid")
+
+
+def _get_openai_api_key() -> str:
+    try:
+        return st.secrets["OPENAI_API_KEY"]
+    except Exception:
+        return os.getenv("OPENAI_API_KEY", "").strip()
 
 
 def interpretar_resultados_con_ia(resultados: Dict[str, Any]) -> str:
     if OpenAI is None:
         return "❌ La librería 'openai' no está instalada en este entorno."
 
-    try:
-        api_key = st.secrets["OPENAI_API_KEY"]
-    except:
-        api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    
+    api_key = _get_openai_api_key()
     if not api_key:
         return "❌ OPENAI_API_KEY no está configurada en secrets o entorno."
 
     client = OpenAI(api_key=api_key)
-    ASSISTANT_ID = "asst_XBKGUebN9P5Zzt81kVmzMLxt"
 
     g1, g2 = "Control (A)", "Variante (B)"
     m1, m2 = resultados["media_real_g1"], resultados["media_real_g2"]
 
     uplift_pct = ((m2 - m1) / m1) * 100 if m1 != 0 else 0
-    precision_b_gana = resultados["precision_b_mejor"] * 100
+    precision_b_mejor = resultados["precision_b_mejor"] * 100
     ci_rel_low, ci_rel_high = resultados["ci_relativo_centrado"]
     cola_derecha_izq = resultados["ci_relativo_derecha_izq"]
     cola_izquierda_der = resultados["ci_relativo_izquierda_der"]
 
-    resumen_datos = (
-        f"DATOS DEL TEST PARA ANALIZAR:\n"
-        f"TEST A/B: {g1} vs {g2}\n"
-        f"MUESTRAS (Visitas): A: {resultados['n_g1']} | B: {resultados['n_g2']}\n"
-        f"CONVERSIONES TOTALES: A: {int(resultados['conv_g1'])} | B: {int(resultados['conv_g2'])}\n"
-        f"----------------------------------------------------\n"
-        f"1. TASA DE CONVERSIÓN MEDIA:\n"
-        f"   - {g1}: {m1:.4%}\n"
-        f"   - {g2}: {m2:.4%}\n\n"
-        f"2. UPLIFT (MEJORA) ESTIMADO:\n"
-        f"   - La variante B mejora un {uplift_pct:.2f}% respecto al control A.\n\n"
-        f"3. NIVEL DE SIGNIFICANCIA DE QUE B > A:\n"
-        f"   - {precision_b_gana:.2f}%\n\n"
-        f"4. INTERVALOS DEL UPLIFT RELATIVO:\n"
-        f"   - IC centrado: [{ci_rel_low:.2f}%, {ci_rel_high:.2f}%]\n"
-        f"   - Cola derecha (IC 95% izquierda): > {cola_derecha_izq:.2f}%\n"
-        f"   - Cola izquierda (IC 95% derecha): < {cola_izquierda_der:.2f}%"
-    )
+    prompt = f"""
+Eres un Director de CRO. Analiza los resultados de un test A/B y proporciona una recomendación clara de negocio basada en inferencia frecuentista.
+
+IMPORTANTE:
+No uses la palabra "probabilidad". Usa siempre "NIVEL DE SIGNIFICANCIA".
+Lenguaje claro, ejecutivo y sin fórmulas.
+
+DATOS DEL TEST:
+
+Grupo Control (A):
+Visitas Acumuladas = {resultados["n_g1"]}
+Conversiones Acumuladas = {int(resultados["conv_g1"])}
+Tasa Media = {m1:.4f}
+
+Grupo Variante (B):
+Visitas Acumuladas = {resultados["n_g2"]}
+Conversiones Acumuladas = {int(resultados["conv_g2"])}
+Tasa Media = {m2:.4f}
+
+TASA DE CONVERSIÓN MEDIA:
+{g1}: {m1:.4f}
+{g2}: {m2:.4f}
+
+UPLIFT (MEJORA) ESTIMADO:
+La variante B mejora un {uplift_pct:.2f}% respecto al control A.
+
+NIVEL DE SIGNIFICANCIA DE QUE B > A:
+{precision_b_mejor:.2f}%
+
+INTERVALOS DEL UPLIFT RELATIVO:
+IC centrado 95%: [{ci_rel_low:.2f}%, {ci_rel_high:.2f}%]
+Límite inferior (escenario conservador): > {cola_derecha_izq:.2f}%
+Límite superior (escenario optimista): < {cola_izquierda_der:.2f}%
+
+REGLAS DE DECISIÓN:
+
+Significancia estadística (regla del cero):
+Si el intervalo de confianza incluye el 0% → el resultado no es concluyente.
+
+Nivel de significancia:
+Si el nivel de significancia de superioridad es > 95% → considerar ganador sólido.
+
+Gestión de riesgo:
+Traduce el peor y mejor escenario del intervalo a impacto real de negocio.
+
+ESTRUCTURA DE RESPUESTA:
+
+DICTAMEN
+Conclusión clara: ¿B gana, pierde o no hay evidencia suficiente?
+
+ANÁLISIS DE RIESGO
+Qué puede pasar en el peor y mejor escenario (impacto negocio).
+
+ACCIÓN RECOMENDADA
+¿Implementar variante, mantener control o seguir testeando?
+Justificación breve y directa.
+""".strip()
 
     try:
-        run = client.beta.threads.create_and_run_poll(
-            assistant_id=ASSISTANT_ID,
-            thread={"messages": [{"role": "user", "content": resumen_datos}]},
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Eres un Director de CRO experto en experimentación y análisis frecuentista.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
         )
-
-        if run.status == "completed":
-            mensajes = client.beta.threads.messages.list(thread_id=run.thread_id)
-            return mensajes.data[0].content[0].text.value
-
-        return f"❌ Error en la ejecución del agente Fisher. Estado final: {run.status}"
-
+        return resp.choices[0].message.content or ""
     except Exception as e:
         return f"❌ Nota: Error de conexión con la API de OpenAI: {e}"
 
@@ -149,7 +191,10 @@ class AnalisisBootstrapAgregado:
             "media_real_g2": float(m_b_obs),
             "precision_b_mejor": precision_b_mejor,
             "ci_diferencia": (ci_low, ci_high),
-            "ci_relativo_centrado": (float(ci_rel_centrado[0]), float(ci_rel_centrado[1])),
+            "ci_relativo_centrado": (
+                float(ci_rel_centrado[0]),
+                float(ci_rel_centrado[1]),
+            ),
             "ci_relativo_derecha_izq": float(ci_rel_derecha_izq),
             "ci_relativo_izquierda_der": float(ci_rel_izquierda_der),
         }
@@ -160,13 +205,25 @@ class AnalisisBootstrapAgregado:
         print("\n" + "=" * 50)
         print(f"{'ANÁLISIS DE PRECISIÓN B vs A':^50}")
         print("=" * 50)
-        print(f"{'Diseño A':<20} | Visitas: {r['n_g1']:>8} | Convs: {int(r['conv_g1']):>6}")
-        print(f"{'Diseño B':<20} | Visitas: {r['n_g2']:>8} | Convs: {int(r['conv_g2']):>6}")
+        print(
+            f"{'Diseño A':<20} | Visitas: {r['n_g1']:>8} | Convs: {int(r['conv_g1']):>6}"
+        )
+        print(
+            f"{'Diseño B':<20} | Visitas: {r['n_g2']:>8} | Convs: {int(r['conv_g2']):>6}"
+        )
         print("-" * 50)
-        print(f"{'NIVEL DE SIGNIFICANCIA DE QUE B > A: ' + f'{r['precision_b_mejor']*100:.2f}%':^50}")
-        print(f"{'IC CENTRADO (UPLIFT): ' + f'[{r['ci_relativo_centrado'][0]:.2f}%, {r['ci_relativo_centrado'][1]:.2f}%]':^50}")
-        print(f"{'COLA DERECHA (IC 95% IZQUIERDA): ' + f'> {r['ci_relativo_derecha_izq']:.2f}%':^50}")
-        print(f"{'COLA IZQUIERDA (IC 95% DERECHA): ' + f'< {r['ci_relativo_izquierda_der']:.2f}%':^50}")
+        print(
+            f"NIVEL DE SIGNIFICANCIA DE QUE B > A: {r['precision_b_mejor'] * 100:.2f}%"
+        )
+        print(
+            f"IC CENTRADO (UPLIFT): [{r['ci_relativo_centrado'][0]:.2f}%, {r['ci_relativo_centrado'][1]:.2f}%]"
+        )
+        print(
+            f"COLA DERECHA (IC 95% IZQUIERDA): > {r['ci_relativo_derecha_izq']:.2f}%"
+        )
+        print(
+            f"COLA IZQUIERDA (IC 95% DERECHA): < {r['ci_relativo_izquierda_der']:.2f}%"
+        )
         print("=" * 50)
 
         if pdf:
@@ -180,7 +237,7 @@ class AnalisisBootstrapAgregado:
                 f"--------------------------------------------\n"
                 f"Tasa Conv. A: {r['media_real_g1']:.4%}\n"
                 f"Tasa Conv. B: {r['media_real_g2']:.4%}\n\n"
-                f"NIVEL DE SIGNIFICANCIA DE QUE B > A: {r['precision_b_mejor']*100:.2f}%\n\n"
+                f"NIVEL DE SIGNIFICANCIA DE QUE B > A: {r['precision_b_mejor'] * 100:.2f}%\n\n"
                 f"INTERVALOS DEL UPLIFT RELATIVO:\n"
                 f"IC Centrado: [{r['ci_relativo_centrado'][0]:.2f}%, {r['ci_relativo_centrado'][1]:.2f}%]\n"
                 f"Cola derecha (IC 95% izquierda): > {r['ci_relativo_derecha_izq']:.2f}%\n"
@@ -200,10 +257,25 @@ class AnalisisBootstrapAgregado:
             plt.close(fig_t)
 
         fig = plt.figure(figsize=(10, 6))
-        sns.histplot(self.distribuciones_medias["diferencia"], color="skyblue", kde=True, element="step")
+        sns.histplot(
+            self.distribuciones_medias["diferencia"],
+            color="skyblue",
+            kde=True,
+            element="step",
+        )
         plt.axvline(0, color="red", linestyle="--", label="Sin diferencia")
-        plt.axvline(r["ci_diferencia"][0], color="green", linestyle=":", label=f"Lím. Izq: {r['ci_diferencia'][0]:.4f}")
-        plt.axvline(r["ci_diferencia"][1], color="green", linestyle=":", label=f"Lím. Der: {r['ci_diferencia'][1]:.4f}")
+        plt.axvline(
+            r["ci_diferencia"][0],
+            color="green",
+            linestyle=":",
+            label=f"Lím. Izq: {r['ci_diferencia'][0]:.4f}",
+        )
+        plt.axvline(
+            r["ci_diferencia"][1],
+            color="green",
+            linestyle=":",
+            label=f"Lím. Der: {r['ci_diferencia'][1]:.4f}",
+        )
         plt.title("Precisión del Uplift: Distribución de la diferencia (B - A)")
         plt.xlabel("Diferencia de Tasas de Conversión")
         plt.legend(loc="upper right")
@@ -253,7 +325,11 @@ def run(df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, 
         log_text = interpretar_resultados_con_ia(analisis.resultados)
 
     r = analisis.resultados
-    uplift_pct = ((r["media_real_g2"] - r["media_real_g1"]) / r["media_real_g1"] * 100) if r["media_real_g1"] != 0 else 0.0
+    uplift_pct = (
+        ((r["media_real_g2"] - r["media_real_g1"]) / r["media_real_g1"] * 100)
+        if r["media_real_g1"] != 0
+        else 0.0
+    )
 
     summary = pd.DataFrame(
         [
