@@ -81,6 +81,11 @@ try:
 
     if key:
         os.environ["OPENAI_API_KEY"] = key
+    else:
+        # Fallback manual input (useful if Streamlit secrets fail in cloud)
+        user_key = st.sidebar.text_input("OpenAI API Key", type="password")
+        if user_key:
+            os.environ["OPENAI_API_KEY"] = user_key
 except Exception:
     # If secrets are not available, rely on existing environment variables
     pass
